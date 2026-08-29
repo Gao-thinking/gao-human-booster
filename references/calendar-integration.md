@@ -6,7 +6,7 @@
 |---|---|---|
 | macOS | osascript 写 Apple 日历（每日重复） | 系统级可见提醒；推荐 |
 | 通用 | 生成 .ics 文件（RRULE 每日重复） | 导入 Google Calendar / Outlook / 手机 |
-| 自动化 | crontab / launchd 定时调起 pi | 到点自动启动复盘会话（需用户决定） |
+| 自动化 | crontab / launchd 定时调起 AI 客户端 | 到点自动启动复盘会话（需用户决定） |
 
 ## 1. macOS Apple 日历（每日 22:00 重复）
 
@@ -53,9 +53,9 @@ END:VCALENDAR
 ## 3. crontab 自动化（可选，用户决定是否启用）
 
 ```bash
-# 每晚 22:00 自动调起 pi 执行晚间复盘（需用户手动添加）
+# 每晚 22:00 自动调起 AI 客户端执行晚间复盘（需用户手动添加，替换 <你的 AI 客户端> 为实际命令）
 # crontab -e
-0 22 * * * cd /Users/gaothinkin/Coding/gao-human-booster && pi --skill gao-human-booster "开始今晚复盘" >> ~/.pi/ghb-nightly.log 2>&1
+0 22 * * * cd <你的 booster 仓库路径> && <你的 AI 客户端> --skill gao-human-booster "开始今晚复盘" >> ~/ghb-nightly.log 2>&1
 ```
 
 （launchd 同理，格式不同。是否启用由用户决定。注意：crontab 自动化需要终端环境与登录态，失败静默不影响手动使用。）
