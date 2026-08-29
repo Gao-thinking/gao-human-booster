@@ -1,0 +1,9 @@
+{
+  "user": {"name": "", "role": "", "wake_time": "07:00", "sleep_time": "23:00"},
+  "review": {"preferred_time": "22:00", "remind": true, "skip_weekend": false},
+  "rules": [],
+  "energy": {},
+  "interests": [],
+  "calendar": {"provider": "apple", "remind_at": "22:00"},
+  "created": ""
+}

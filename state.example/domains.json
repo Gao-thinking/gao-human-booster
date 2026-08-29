@@ -1,0 +1,56 @@
+{
+  "domains": {
+    "工作/事业": {
+      "job": "",
+      "priority": 1.0,
+      "prior": 0.5,
+      "alpha": 2.0,
+      "beta": 2.0,
+      "score": 0.5,
+      "streak": 0,
+      "best_streak": 0,
+      "last_evidence": "",
+      "weekly": [],
+      "status": "active"
+    },
+    "追求": {
+      "job": "",
+      "priority": 0.8,
+      "prior": 0.5,
+      "alpha": 2.0,
+      "beta": 2.0,
+      "score": 0.5,
+      "streak": 0,
+      "best_streak": 0,
+      "last_evidence": "",
+      "weekly": [],
+      "status": "active"
+    },
+    "健身": {
+      "job": "",
+      "priority": 0.9,
+      "prior": 0.5,
+      "alpha": 2.0,
+      "beta": 2.0,
+      "score": 0.5,
+      "streak": 0,
+      "best_streak": 0,
+      "last_evidence": "",
+      "weekly": [],
+      "status": "active"
+    },
+    "关系": {
+      "job": "",
+      "priority": 0.7,
+      "prior": 0.5,
+      "alpha": 2.0,
+      "beta": 2.0,
+      "score": 0.5,
+      "streak": 0,
+      "best_streak": 0,
+      "last_evidence": "",
+      "weekly": [],
+      "status": "active"
+    }
+  }
+}
