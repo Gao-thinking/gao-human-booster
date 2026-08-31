@@ -629,25 +629,35 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .modal.open .sheet{{transform:scale(1);opacity:1}}
 .sheet::-webkit-scrollbar{{display:none}}
 /* 打印机吐卡效果 */
-/* 单据纸身：热敏纸质感 + 横向细纹 + 上下锯齿撕边 */
+/* 单据纸身：针式打印纸（发票）质感 + 横向细纹 + 两侧链轮孔条 + 上下锯齿撕边 */
 .sheet-body{{position:relative;background:
   repeating-linear-gradient(180deg,rgba(120,85,40,.045) 0 1px,transparent 1px 4px),
   url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n2"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feColorMatrix type="matrix" values="0 0 0 0 0.5 0 0 0 0 0.38 0 0 0 0 0.22 0 0 0 0.07 0"/></filter><rect width="140" height="140" filter="url(%23n2)"/></svg>'),
   linear-gradient(180deg,#fbf5e4,#f3e6ca);
-  padding:14px 22px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(120,85,40,.15)}}
+  padding:14px 30px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(120,85,40,.15)}}
+/* 两侧链轮定位孔条（tractor feed）+ 内侧撕离虚线 */
+.sheet-body::before,.sheet-body::after{{content:'';position:absolute;top:8px;bottom:8px;width:16px;background:
+  radial-gradient(circle 3.5px at 8px 12px,rgba(28,16,5,.5) 3.2px,transparent 3.6px) 0 0/16px 26px repeat-y,
+  linear-gradient(90deg,rgba(120,85,40,.10),rgba(120,85,40,.02));}}
+.sheet-body::before{{left:3px;border-right:1px dashed rgba(120,85,40,.35)}}
+.sheet-body::after{{right:3px;border-left:1px dashed rgba(120,85,40,.35);transform:scaleX(-1)}}
 /* 打字机 + 缓慢吐纸 */
 .tw{{display:block;margin:2px auto -2px;width:216px;height:76px}}
 .tw .tw-knob{{transform-box:fill-box;transform-origin:center}}
 .sheet.printing .tw .tw-knob{{animation:tw-knob 2.4s linear .05s}}
 @keyframes tw-knob{{to{{transform:rotate(360deg)}}}}
-/* 单据作为整体从滚筒下缓慢吐出，带收据锯齿边 */
-.sheet.printing .sheet-body{{clip-path:inset(0 0 100% 0);transform:translateY(-16px);animation:print-feed 2.4s linear .05s forwards}}
-.sheet.printing .sheet-body::after{{content:'';position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(-45deg,transparent 7px,#f3e6ca 0) 0 0/14px 14px,linear-gradient(45deg,transparent 7px,#f3e6ca 0) 7px 0/14px 14px;background-repeat:repeat-x}}
+/* 仿真出纸：打印头在纸尾打印，页尾先露出、页头最后出来 */
+/* 实现纸张倒置（rotate 180°），从滚筒下匀速钻出后翻正 */
+.sheet.printing .sheet-body{{transform:rotate(180deg) translateY(24px);opacity:0;animation:print-feed 2.4s cubic-bezier(.3,.4,.4,1) .05s forwards}}
+.sheet.printing .sheet-body::before,.sheet.printing .sheet-body::after{{opacity:0;transition:opacity .3s .9s}}
+@keyframes print-feed{{
+  0%{{transform:rotate(180deg) translateY(24px);opacity:0;clip-path:inset(0 0 92% 0)}}
+  12%{{opacity:1}}
+  100%{{transform:rotate(0) translateY(0);opacity:1;clip-path:inset(0 0 -6px 0)}}}}
 /* 压纸杆：纸从其下方钻出，吐完淡出 */
 .sheet.printing::after{{content:'';position:absolute;top:86px;left:50%;transform:translateX(-50%);width:64%;height:8px;background:rgba(43,28,12,.92);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.4);z-index:3;pointer-events:none;animation:print-slot 2.55s ease .05s both}}
 .modal.open .sheet.printing{{animation:print-jitter .26s linear 9}}
 .m-btn.off{{opacity:.45}}
-@keyframes print-feed{{0%{{clip-path:inset(0 0 100% 0);transform:translateY(-16px)}}100%{{clip-path:inset(0 0 -14px 0);transform:translateY(0)}}}}
 @keyframes print-jitter{{0%,100%{{transform:scale(1) translateY(0)}}50%{{transform:scale(1) translateY(1px)}}}}
 @keyframes print-slot{{0%,86%{{opacity:1}}100%{{opacity:0}}}}
 @media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none;transform:none}}.sheet.printing .sheet-body::after{{display:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}.sheet.printing .tw .tw-knob{{animation:none}}}}
@@ -660,11 +670,11 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .m-close .ic{{width:13px;height:13px}}
 .m-date{{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:21px;font-weight:700;letter-spacing:2px}}
 .m-wd{{font-size:12px;color:var(--ink-soft);margin-top:5px;display:flex;align-items:center;gap:8px;font-family:monospace;letter-spacing:1px}}
-/* 穿孔撕线（单据中缝，便于"撕下"的感觉） */
-.perforation{{position:relative;height:0;border-top:2px dashed rgba(120,85,40,.35);margin:14px -22px 10px}}
-.perforation::before,.perforation::after{{content:'';position:absolute;top:-7px;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.22),rgba(0,0,0,.08) 55%,transparent 60%)}}
-.perforation::before{{left:-7px}}
-.perforation::after{{right:-7px}}
+/* 穿孔撕线（发票微孔撕边：密集圆孔 + 两侧冲孔） */
+.perforation{{position:relative;height:0;border-top:2px dotted rgba(120,85,40,.45);margin:14px -30px 10px}}
+.perforation::before,.perforation::after{{content:'';position:absolute;top:-6px;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.24),rgba(0,0,0,.09) 55%,transparent 60%)}}
+.perforation::before{{left:-6px}}
+.perforation::after{{right:-6px}}
 .sec{{margin-top:14px}}
 .sec h4{{font-size:12px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
 .sec h4::after{{content:'· · ·';margin-left:auto;letter-spacing:2px;color:rgba(120,85,40,.3);font-weight:700;font-style:normal}}
