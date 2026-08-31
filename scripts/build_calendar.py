@@ -905,7 +905,11 @@ function renderPlanBlock(pList, iso, today) {{
       if (p.done) cls += ' done';
       else if (iso < today) cls += ' overdue';
       var dotCls = PLAN_DOT[p.kind] || 'plan';
-      items.push('<div class="'+cls+'"><span class="p-dot '+dotCls+'"></span>'+esc(p.text.substring(0,10))+'</div>');
+      var preview = p.text;
+      var timeRange = preview.match(/^ *[0-9][0-9]?:[0-9][0-9] *[-–—至到] *[0-9][0-9]?:[0-9][0-9]/);
+      if (timeRange) preview = timeRange[0].trim();
+      else preview = preview.substring(0,10);
+      items.push('<div class="'+cls+'"><span class="p-dot '+dotCls+'"></span>'+esc(preview)+'</div>');
     }} else more++;
   }}
   var h = '<div class="p-plan">'+items.join('');
