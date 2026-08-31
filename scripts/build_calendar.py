@@ -630,23 +630,15 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .sheet::-webkit-scrollbar{{display:none}}
 /* 打印机吐卡效果 */
 .sheet-body{{position:relative}}
-.sheet.printing .sheet-body{{clip-path:inset(0 0 100% 0);animation:print-reveal 1.15s steps(14,end) .05s forwards}}
-.sheet.printing .sheet-body>.m-head,.sheet.printing .sheet-body>.sec,.sheet.printing .sheet-body>.completed{{animation:print-settle .28s ease-out both}}
-.sheet.printing .sheet-body>.sec:nth-child(2){{animation-delay:.10s}}
-.sheet.printing .sheet-body>.sec:nth-child(3){{animation-delay:.22s}}
-.sheet.printing .sheet-body>.sec:nth-child(4){{animation-delay:.34s}}
-.sheet.printing .sheet-body>.sec:nth-child(5){{animation-delay:.46s}}
-.sheet.printing .sheet-body>.sec:nth-child(6){{animation-delay:.58s}}
-.sheet.printing .sheet-body>.sec:nth-child(7){{animation-delay:.70s}}
-.sheet.printing .sheet-body>.sec:nth-child(8){{animation-delay:.82s}}
-.sheet.printing::after{{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:62%;height:9px;background:rgba(43,28,12,.9);border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.45);z-index:3;pointer-events:none;animation:print-slot 1.3s ease .05s both}}
+/* 整张纸从纸槽作为一个整体滑出 */
+.sheet.printing .sheet-body{{clip-path:inset(0 0 100% 0);transform:translateY(-26px);animation:print-feed 1.15s cubic-bezier(.25,.5,.35,1) .05s forwards}}
+.sheet.printing::after{{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:62%;height:9px;background:rgba(43,28,12,.9);border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.45);z-index:3;pointer-events:none;animation:print-slot 1.35s ease .05s both}}
 .modal.open .sheet.printing{{animation:print-jitter .13s linear 10}}
 .m-btn.off{{opacity:.45}}
-@keyframes print-reveal{{to{{clip-path:inset(0 0 -10px 0)}}}}
-@keyframes print-settle{{from{{transform:translateY(-5px);opacity:.4}}to{{transform:none;opacity:1}}}}
+@keyframes print-feed{{to{{clip-path:inset(0 0 -12px 0);transform:translateY(0)}}}}
 @keyframes print-jitter{{0%,100%{{transform:scale(1) translateY(0)}}50%{{transform:scale(1) translateY(1px)}}}}
 @keyframes print-slot{{0%,80%{{opacity:1}}100%{{opacity:0}}}}
-@media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none}}.sheet.printing .sheet-body>.m-head,.sheet.printing .sheet-body>.sec,.sheet.printing .sheet-body>.completed{{animation:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}}}
+@media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none;transform:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}}}
 .m-head{{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:6px}}
 .m-actions{{display:flex;gap:8px;align-items:center;flex:none}}
 .m-btn{{border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:rgba(90,60,25,.12);color:var(--ink);font-size:12px;border-radius:8px;padding:6px 9px;transition:background .15s;line-height:1}}
@@ -1201,36 +1193,34 @@ function closeModal(){{MODAL.classList.remove('open');MODAL.setAttribute('aria-h
 var PRINT_TIMER = null;
 var PRINT_ON = (function(){{try{{return localStorage.getItem('ghb-print')!=='off';}}catch(e){{return true;}}}})();
 var PRINT_CTX = null;
+function printClack(ctx, ts, pitch) {{
+  /* 一次咔哒 = 白噪声短脉冲（打字头击键）+ 低频正弦（机械敲击托底） */
+  var n = ctx.sampleRate * 0.02;
+  var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  var ch = buf.getChannelData(0);
+  for (var i=0;i<n;i++) ch[i] = (Math.random()*2-1) * Math.pow(1-i/n, 2.2);
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 2800 + pitch*900; bp.Q.value = 1.6;
+  var ng = ctx.createGain(); ng.gain.setValueAtTime(0.14, ts);
+  ng.gain.exponentialRampToValueAtTime(0.0001, ts+0.02);
+  src.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
+  src.start(ts);
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(170 + pitch*30, ts);
+  o.frequency.exponentialRampToValueAtTime(80, ts+0.035);
+  o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(0.10, ts);
+  g.gain.exponentialRampToValueAtTime(0.0001, ts+0.04);
+  o.start(ts); o.stop(ts+0.05);
+}}
 function printSound() {{
   try {{
     if (!PRINT_CTX) PRINT_CTX = new (window.AudioContext||window.webkitAudioContext)();
     var ctx = PRINT_CTX;
     if (ctx.state==='suspended') ctx.resume();
     var t0 = ctx.currentTime;
-    /* 打印头步进：11 段交替双击咔哒声 */
-    for (var i=0;i<11;i++) {{
-      for (var k=0;k<2;k++) {{
-        var o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-        f.type='bandpass'; f.frequency.value = 2200 + (i%2)*700; f.Q.value = 6;
-        o.type='square'; o.frequency.value = 160 + (i%3)*40;
-        o.connect(f); f.connect(g); g.connect(ctx.destination);
-        var ts = t0 + 0.07 + i*0.095 + k*0.018;
-        g.gain.setValueAtTime(0.0001, ts);
-        g.gain.exponentialRampToValueAtTime(0.05, ts+0.004);
-        g.gain.exponentialRampToValueAtTime(0.0001, ts+0.016);
-        o.start(ts); o.stop(ts+0.02);
-      }}
-    }}
-    /* 末尾撕纸声：白噪声短促衰减 */
-    var len = ctx.sampleRate * 0.22;
-    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    var ch = buf.getChannelData(0);
-    for (var n=0;n<len;n++) ch[n] = (Math.random()*2-1) * (1 - n/len) * (n<40 ? n/40 : 1);
-    var src = ctx.createBufferSource(); src.buffer = buf;
-    var bp = ctx.createBiquadFilter(); bp.type='highpass'; bp.frequency.value=1800;
-    var ng = ctx.createGain(); ng.gain.setValueAtTime(0.06, t0+1.18);
-    src.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
-    src.start(t0+1.18);
+    /* 打字机咔哒声：匀速 12 击，与出纸时长对齐 */
+    for (var i=0;i<12;i++) printClack(ctx, t0 + 0.06 + i*0.088, i%2);
   }} catch(e) {{ /* 音频不可用则静默 */ }}
 }}
 function playPrint(iso) {{
