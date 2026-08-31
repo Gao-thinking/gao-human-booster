@@ -641,26 +641,24 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
   linear-gradient(90deg,rgba(120,85,40,.10),rgba(120,85,40,.02));}}
 .sheet-body::before{{left:3px;border-right:1px dashed rgba(120,85,40,.35)}}
 .sheet-body::after{{right:3px;border-left:1px dashed rgba(120,85,40,.35);transform:scaleX(-1)}}
-/* 打字机 + 缓慢吐纸 */
-.tw{{display:block;margin:2px auto -2px;width:216px;height:76px}}
+/* 打字机 + 出纸窗口：纸张整体从滚筒后向下滑出，底边（单据尾部）先露出 */
+.tw{{display:block;position:relative;z-index:4;margin:2px auto -2px;width:216px;height:76px}}
+.paper-window{{overflow:hidden}}
+.sheet-body .sheet-body{{}}
 .tw .tw-knob{{transform-box:fill-box;transform-origin:center}}
 .sheet.printing .tw .tw-knob{{animation:tw-knob 2.4s linear .05s}}
 @keyframes tw-knob{{to{{transform:rotate(360deg)}}}}
-/* 仿真出纸：打印头在纸尾打印，页尾先露出、页头最后出来 */
-/* 实现纸张倒置（rotate 180°），从滚筒下匀速钻出后翻正 */
-.sheet.printing .sheet-body{{transform:rotate(180deg) translateY(24px);opacity:0;animation:print-feed 2.4s cubic-bezier(.3,.4,.4,1) .05s forwards}}
-.sheet.printing .sheet-body::before,.sheet.printing .sheet-body::after{{opacity:0;transition:opacity .3s .9s}}
-@keyframes print-feed{{
-  0%{{transform:rotate(180deg) translateY(24px);opacity:0;clip-path:inset(0 0 92% 0)}}
-  12%{{opacity:1}}
-  100%{{transform:rotate(0) translateY(0);opacity:1;clip-path:inset(0 0 -6px 0)}}}}
-/* 压纸杆：纸从其下方钻出，吐完淡出 */
+/* 仿真出纸：整张纸从滚筒后下滑，尾部先出、页头最后到位（参考 GitHub 收据打印机效果） */
+.sheet.printing .paper-window .sheet-body{{transform:translateY(-102%);animation:print-feed 2.4s cubic-bezier(.3,.5,.35,1) .05s forwards}}
+@keyframes print-feed{{to{{transform:translateY(0)}}}}
+/* 压纸杆 + 出纸口投影：纸从杆下钻出 */
 .sheet.printing::after{{content:'';position:absolute;top:86px;left:50%;transform:translateX(-50%);width:64%;height:8px;background:rgba(43,28,12,.92);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.4);z-index:3;pointer-events:none;animation:print-slot 2.55s ease .05s both}}
+.sheet.printing::before{{content:'';position:absolute;top:94px;left:8%;width:84%;height:70px;background:linear-gradient(to bottom,rgba(20,10,3,.38),rgba(20,10,3,.16) 45%,transparent);z-index:2;pointer-events:none;mix-blend-mode:multiply;animation:print-slot 2.55s ease .05s both}}
 .modal.open .sheet.printing{{animation:print-jitter .26s linear 9}}
 .m-btn.off{{opacity:.45}}
 @keyframes print-jitter{{0%,100%{{transform:scale(1) translateY(0)}}50%{{transform:scale(1) translateY(1px)}}}}
 @keyframes print-slot{{0%,86%{{opacity:1}}100%{{opacity:0}}}}
-@media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none;transform:none}}.sheet.printing .sheet-body::after{{display:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}.sheet.printing .tw .tw-knob{{animation:none}}}}
+@media (prefers-reduced-motion: reduce){{.sheet.printing .paper-window .sheet-body{{animation:none;transform:none}}.sheet.printing::before{{display:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}.sheet.printing .tw .tw-knob{{animation:none}}}}
 .m-head{{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:6px;border-bottom:2px dashed rgba(120,85,40,.35);padding-bottom:10px;margin-bottom:4px}}
 .m-actions{{display:flex;gap:8px;align-items:center;flex:none}}
 .m-btn{{border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:rgba(90,60,25,.12);color:var(--ink);font-size:12px;border-radius:8px;padding:6px 9px;transition:background .15s;line-height:1}}
@@ -671,28 +669,33 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .m-date{{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:21px;font-weight:700;letter-spacing:2px}}
 .m-wd{{font-size:12px;color:var(--ink-soft);margin-top:5px;display:flex;align-items:center;gap:8px;font-family:monospace;letter-spacing:1px}}
 /* 穿孔撕线（发票微孔撕边：密集圆孔 + 两侧冲孔） */
-.perforation{{position:relative;height:0;border-top:2px dotted rgba(120,85,40,.45);margin:14px -30px 10px}}
+.perforation{{position:relative;height:0;border-top:2px dotted rgba(120,85,40,.45);margin:16px -30px 12px}}
 .perforation::before,.perforation::after{{content:'';position:absolute;top:-6px;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.24),rgba(0,0,0,.09) 55%,transparent 60%)}}
 .perforation::before{{left:-6px}}
 .perforation::after{{right:-6px}}
-.sec{{margin-top:14px}}
-.sec h4{{font-size:12px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
+/* 双栏模块化排版：呼吸感优先 */
+.rc-cols{{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:start}}
+.rc-col{{min-width:0}}
+@media (max-width:640px){{.rc-cols{{grid-template-columns:1fr;gap:0}}.rc-col+.rc-col{{border-top:2px dotted rgba(120,85,40,.3);margin-top:14px;padding-top:4px}}}}
+.sec{{margin-top:16px}}
+.sec:first-child{{margin-top:2px}}
+.sec h4{{font-size:12px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:6px;margin-bottom:10px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
 .sec h4::after{{content:'· · ·';margin-left:auto;letter-spacing:2px;color:rgba(120,85,40,.3);font-weight:700;font-style:normal}}
 .lst{{list-style:none}}
-.lst li{{padding:3px 0;font-size:14px;line-height:1.55;color:var(--ink);display:flex;gap:7px;align-items:baseline}}
-.lst li .ic{{flex:none;transform:translateY(1px)}}
+.lst li{{padding:5px 0;font-size:14px;line-height:1.65;color:var(--ink);display:flex;gap:8px;align-items:baseline}}
+.lst li .ic{{flex:none;transform:translateY(2px)}}
 .lst.done .ic{{color:#2e7d5b}}
 .lst.undone .ic{{color:#c0392b}}
 .lst.worry .ic{{color:#b59a5a}}
 .none{{font-size:13px;color:#a08a64;font-style:italic}}
-.srow{{display:flex;align-items:center;gap:10px;margin:6px 0}}
+.srow{{display:flex;align-items:center;gap:10px;margin:8px 0}}
 .sname{{width:64px;font-size:12px;color:var(--ink-soft);flex:none}}
 .sbar{{flex:1;height:9px;border-radius:5px;background:rgba(60,40,15,.14);overflow:hidden}}
 .sbar i{{display:block;height:100%;border-radius:5px}}
 .sval{{width:26px;text-align:right;font-size:12px;font-weight:700}}
-.nextbox{{background:rgba(217,164,65,.14);border:1px dashed rgba(160,115,35,.5);border-radius:10px;padding:10px 12px;margin-top:4px}}
-.nextbox .n-main{{font-size:14px;font-weight:700;line-height:1.6;display:flex;gap:7px;align-items:baseline}}
-.nextbox .n-bak{{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.7}}
+.nextbox{{background:rgba(217,164,65,.14);border:1px dashed rgba(160,115,35,.5);border-radius:10px;padding:12px 14px;margin-top:6px}}
+.nextbox .n-main{{font-size:14px;font-weight:700;line-height:1.7;display:flex;gap:7px;align-items:baseline}}
+.nextbox .n-bak{{font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.8}}
 .completed{{margin-top:12px;font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px}}
 .completed .ic{{color:#2e7d5b}}
 .completed b.fail{{color:#c0392b}}
@@ -1205,7 +1208,7 @@ function openDay(iso) {{
       '</g>'+
       '<rect x="98" y="55" width="20" height="5" rx="2" fill="#e6cda0"/>'+
     '</svg>'+
-    '<div class="sheet-body">'+
+    '<div class="paper-window"><div class="sheet-body">'+
     '<div class="m-head">'+
       '<div><div class="m-date">'+iso+'</div>'+
       '<div class="m-wd">'+WD[dt.getDay()]+' · 复盘记录 '+moodIcon(d.mood)+'</div></div>'+
@@ -1214,17 +1217,24 @@ function openDay(iso) {{
         '<button class="m-btn'+(PRINT_ON?'':' off')+'" id="mfx-toggle">'+(PRINT_ON?'效果 开':'效果 关')+'</button>'+
         '<button class="m-btn" id="mexport">'+ic('download','ic-sm')+' 导出图片</button>'+
         '<button class="m-btn m-close" id="mclose">'+ic('x')+'</button></div></div>'+
-    '<div class="sec"><h4>'+ic('check-circle','ic-sm')+' 完成</h4>'+lst(done,'done')+'</div>'+
-    '<div class="sec"><h4>'+ic('x-circle','ic-sm')+' 未完成</h4>'+lst(undone,'undone')+'</div>'+
-    '<div class="sec"><h4>'+ic('cloud','ic-sm')+' 担心 / 情绪</h4>'+lst(dw,'worry')+'</div>'+
-    (bars?'<div class="sec"><h4>'+ic('bar-chart-2','ic-sm')+' 领域评分</h4>'+bars+'</div>':'')+
-    secLst('情报补给','trending-up',intel,'#c9a45a')+
-    secLst('推荐','star',recs,'#5b8db8')+
-    planHtml+
-    expertHtml+
-    nextBox+
+    '<div class="perforation"></div>'+
+    '<div class="rc-cols">'+
+      '<div class="rc-col">'+
+        '<div class="sec"><h4>'+ic('check-circle','ic-sm')+' 完成</h4>'+lst(done,'done')+'</div>'+
+        '<div class="sec"><h4>'+ic('x-circle','ic-sm')+' 未完成</h4>'+lst(undone,'undone')+'</div>'+
+        '<div class="sec"><h4>'+ic('cloud','ic-sm')+' 担心 / 情绪</h4>'+lst(dw,'worry')+'</div>'+
+      '</div>'+
+      '<div class="rc-col">'+
+        (bars?'<div class="sec"><h4>'+ic('bar-chart-2','ic-sm')+' 领域评分</h4>'+bars+'</div>':'')+
+        secLst('情报补给','trending-up',intel,'#c9a45a')+
+        secLst('推荐','star',recs,'#5b8db8')+
+      '</div>'+
+    '</div>'+
+    (expertHtml||'')+
+    (planHtml?'<div class="perforation"></div>'+planHtml:'')+
+    (nextBox?'<div class="perforation"></div>'+nextBox:'')+
     comp+
-    '</div>';
+    '</div></div>';
   MODAL.classList.add('open');
   MODAL.setAttribute('aria-hidden','false');
   document.getElementById('mclose').onclick = function(){{closeModal();}};
@@ -1283,7 +1293,7 @@ function playPrint(iso) {{
   void sheet.offsetWidth;   /* 重置动画 */
   sheet.classList.add('printing');
   printSound();
-  PRINT_TIMER = setInterval(function() {{ sheet.classList.remove('printing'); clearInterval(PRINT_TIMER); }}, 1500);
+  PRINT_TIMER = setInterval(function() {{ sheet.classList.remove('printing'); clearInterval(PRINT_TIMER); }}, 2800);
 }}
 document.querySelector('.overlay').addEventListener('click', closeModal);
 document.addEventListener('keydown',function(e){{if(e.key==='Escape')closeModal();}});
