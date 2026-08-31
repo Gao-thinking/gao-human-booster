@@ -587,7 +587,8 @@ header{{text-align:center;margin-bottom:22px}}
 @keyframes glow{{0%,100%{{box-shadow:0 0 0 rgba(217,164,65,0)}}50%{{box-shadow:0 0 14px rgba(217,164,65,.85)}}}}
 
 /* 计划卡 */
-.p-plan{{margin-top:4px;border-top:1px dashed rgba(200,170,120,.4);padding-top:4px;font-size:10px;line-height:1.5}}
+.p-plan{{margin-top:4px;border-top:1px dashed rgba(200,170,120,.4);padding-top:4px;font-size:10px;line-height:1.5;max-height:54px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}}
+.p-plan::-webkit-scrollbar{{display:none}}
 .p-plan-item{{display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-soft);cursor:pointer}}
 .p-plan-item .p-dot{{width:5px;height:5px;border-radius:50%;flex:none}}
 .p-plan-item .p-dot.main{{background:var(--gold);box-shadow:0 0 4px var(--gold)}}
@@ -597,8 +598,6 @@ header{{text-align:center;margin-bottom:22px}}
 .p-plan-item.done{{opacity:.5;text-decoration:line-through}}
 .p-plan-item.overdue .p-dot.main{{background:#c0392b;box-shadow:0 0 4px #c0392b}}
 .p-plan-item.overdue{{color:#c0392b}}
-.p-plan-more{{font-size:10px;color:var(--ink-soft);text-align:right;padding-right:2px;cursor:pointer}}
-.p-plan-more:hover{{color:#c9a45a}}
 
 /* 今日计划横幅 */
 .today-banner{{max-width:1240px;margin:0 auto 14px;padding:10px 16px;background:rgba(217,164,65,.12);border:1px dashed rgba(217,164,65,.45);border-radius:10px;color:#e6cda0;font-size:13px;display:none;align-items:center;gap:10px;flex-wrap:wrap}}
@@ -879,6 +878,15 @@ function renderMonth(month) {{
   grid.querySelectorAll('.cell[data-day]').forEach(function(el) {{
     el.addEventListener('click', function() {{ openDay(el.dataset.day); }});
   }});
+  grid.querySelectorAll('.p-plan').forEach(function(box) {{
+    if (box.scrollHeight <= box.clientHeight) return;
+    box.addEventListener('mouseenter', function() {{
+      box.scrollTo({{top: box.scrollHeight, behavior: 'smooth'}});
+    }});
+    box.addEventListener('mouseleave', function() {{
+      box.scrollTo({{top: 0, behavior: 'auto'}});
+    }});
+  }});
 }}
 
 function renderEmptyGrid(y, m, grid) {{
@@ -897,23 +905,19 @@ function renderEmptyGrid(y, m, grid) {{
 
 function renderPlanBlock(pList, iso, today) {{
   var items = [];
-  var more = 0;
   for (var i=0;i<pList.length;i++) {{
     var p = pList[i];
-    if (i < 2) {{
-      var cls = 'p-plan-item';
-      if (p.done) cls += ' done';
-      else if (iso < today) cls += ' overdue';
-      var dotCls = PLAN_DOT[p.kind] || 'plan';
-      var preview = p.text;
-      var timeRange = preview.match(/^ *[0-9][0-9]?:[0-9][0-9] *[-–—至到] *[0-9][0-9]?:[0-9][0-9]/);
-      if (timeRange) preview = timeRange[0].trim();
-      else preview = preview.substring(0,10);
-      items.push('<div class="'+cls+'"><span class="p-dot '+dotCls+'"></span>'+esc(preview)+'</div>');
-    }} else more++;
+    var cls = 'p-plan-item';
+    if (p.done) cls += ' done';
+    else if (iso < today) cls += ' overdue';
+    var dotCls = PLAN_DOT[p.kind] || 'plan';
+    var preview = p.text;
+    var timeRange = preview.match(/^ *[0-9][0-9]?:[0-9][0-9] *[-–—至到] *[0-9][0-9]?:[0-9][0-9]/);
+    if (timeRange) preview = timeRange[0].trim();
+    else preview = preview.substring(0,10);
+    items.push('<div class="'+cls+'"><span class="p-dot '+dotCls+'"></span>'+esc(preview)+'</div>');
   }}
   var h = '<div class="p-plan">'+items.join('');
-  if (more) h += '<div class="p-plan-more">+'+more+'</div>';
   return h + '</div>';
 }}
 
