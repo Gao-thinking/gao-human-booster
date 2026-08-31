@@ -625,7 +625,7 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .modal{{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50;padding:20px}}
 .modal.open{{display:flex}}
 .overlay{{position:absolute;inset:0;background:rgba(18,9,3,.62);backdrop-filter:blur(3px)}}
-.sheet{{position:relative;width:min(560px,94vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:transparent;border-radius:12px;padding:6px 2px 2px;box-shadow:0 24px 60px rgba(0,0,0,.6);transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}}
+.sheet{{position:relative;width:min(660px,96vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:transparent;border-radius:12px;padding:6px 2px 2px;box-shadow:0 24px 60px rgba(0,0,0,.6);transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}}
 .modal.open .sheet{{transform:scale(1);opacity:1}}
 .sheet::-webkit-scrollbar{{display:none}}
 /* 打印机吐卡效果 */
@@ -641,9 +641,9 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
   linear-gradient(90deg,rgba(120,85,40,.10),rgba(120,85,40,.02));}}
 .sheet-body::before{{left:3px;border-right:1px dashed rgba(120,85,40,.35)}}
 .sheet-body::after{{right:3px;border-left:1px dashed rgba(120,85,40,.35)}}
-/* 打字机 + 出纸窗口：纸张整体从滚筒后向下滑出，底边（单据尾部）先露出 */
-.tw{{display:block;position:relative;z-index:4;margin:2px auto -2px;width:216px;height:76px}}
-.paper-window{{overflow:hidden}}
+/* 打字机 + 出纸窗口：机身明显比单据宽，纸从机身下方窄缝吐出 */
+.tw{{display:block;position:relative;z-index:4;margin:2px auto -2px;width:calc(100% + 28px);max-width:660px;height:88px}}
+.paper-window{{width:min(470px,86%);margin:0 auto;overflow:hidden}}
 .sheet-body .sheet-body{{}}
 .tw .tw-knob{{transform-box:fill-box;transform-origin:center}}
 .sheet.printing .tw .tw-knob{{animation:tw-knob 2.4s linear .05s}}
@@ -652,8 +652,8 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .sheet.printing .paper-window .sheet-body{{transform:translateY(-102%);animation:print-feed 2.4s cubic-bezier(.3,.5,.35,1) .05s forwards}}
 @keyframes print-feed{{to{{transform:translateY(0)}}}}
 /* 压纸杆 + 出纸口投影：纸从杆下钻出 */
-.sheet.printing::after{{content:'';position:absolute;top:86px;left:50%;transform:translateX(-50%);width:64%;height:8px;background:rgba(43,28,12,.92);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.4);z-index:3;pointer-events:none;animation:print-slot 2.55s ease .05s both}}
-.sheet.printing::before{{content:'';position:absolute;top:94px;left:8%;width:84%;height:70px;background:linear-gradient(to bottom,rgba(20,10,3,.38),rgba(20,10,3,.16) 45%,transparent);z-index:2;pointer-events:none;mix-blend-mode:multiply;animation:print-slot 2.55s ease .05s both}}
+.sheet.printing::after{{content:'';position:absolute;top:82px;left:50%;transform:translateX(-50%);width:58%;height:8px;background:rgba(43,28,12,.92);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.4);z-index:3;pointer-events:none;animation:print-slot 2.55s ease .05s both}}
+.sheet.printing::before{{content:'';position:absolute;top:90px;left:8%;width:84%;height:70px;background:linear-gradient(to bottom,rgba(20,10,3,.38),rgba(20,10,3,.16) 45%,transparent);z-index:2;pointer-events:none;mix-blend-mode:multiply;animation:print-slot 2.55s ease .05s both}}
 .modal.open .sheet.printing{{animation:print-jitter .26s linear 9}}
 .m-btn.off{{opacity:.45}}
 @keyframes print-jitter{{0%,100%{{transform:scale(1) translateY(0)}}50%{{transform:scale(1) translateY(1px)}}}}
@@ -674,30 +674,36 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .perforation::before{{left:-6px}}
 .perforation::after{{right:-6px}}
 /* 双栏模块化排版：呼吸感优先 */
-.rc-cols{{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:start}}
+.rc-cols{{display:grid;grid-template-columns:1fr 1fr;gap:0 34px;align-items:start}}
 .rc-col{{min-width:0;max-width:100%;overflow-wrap:break-word;word-break:break-word}}
 .rc-col .lst li{{white-space:normal;overflow-wrap:anywhere}}
 .rc-col .srow{{min-width:0}}
-@media (max-width:640px){{.rc-cols{{grid-template-columns:1fr;gap:0}}.rc-col+.rc-col{{border-top:2px dotted rgba(120,85,40,.3);margin-top:14px;padding-top:4px}}}}
-.sec{{margin-top:16px}}
-.sec:first-child{{margin-top:2px}}
-.sec h4{{font-size:12px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:6px;margin-bottom:10px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
+@media (max-width:640px){{.rc-cols{{grid-template-columns:1fr;gap:0}}.rc-col+.rc-col{{border-top:2px dotted rgba(120,85,40,.3);margin-top:16px;padding-top:4px}}}}
+.sec{{margin-top:22px}}
+.sec:first-child{{margin-top:4px}}
+.sec h4{{font-size:11.5px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
 .sec h4::after{{content:'· · ·';margin-left:auto;letter-spacing:2px;color:rgba(120,85,40,.3);font-weight:700;font-style:normal}}
 .lst{{list-style:none}}
-.lst li{{padding:5px 0;font-size:14px;line-height:1.65;color:var(--ink);display:flex;gap:8px;align-items:baseline}}
+.lst li{{padding:7px 0;font-size:13.5px;line-height:1.8;color:var(--ink);display:flex;gap:9px;align-items:baseline}}
 .lst li .ic{{flex:none;transform:translateY(2px)}}
+.lst li+li{{border-top:1px dotted rgba(120,85,40,.18)}}
 .lst.done .ic{{color:#2e7d5b}}
 .lst.undone .ic{{color:#c0392b}}
 .lst.worry .ic{{color:#b59a5a}}
 .none{{font-size:13px;color:#a08a64;font-style:italic}}
-.srow{{display:flex;align-items:center;gap:10px;margin:8px 0}}
+/* 情报/推荐：作注脚处理，弱化密度；块级流式排版，链接随文换行 */
+.sec .intel-list li{{display:block;font-size:12.5px;line-height:1.95;color:var(--ink-soft)}}
+.sec .intel-list li .ic{{margin-right:2px}}
+.sec .intel-list li a{{color:#8a6a3d;text-decoration:none;border-bottom:1px dotted rgba(138,106,61,.5);font-size:12px;white-space:nowrap}}
+.sec .intel-list li a:hover{{color:#c9a45a}}
+.srow{{display:flex;align-items:center;gap:10px;margin:9px 0}}
 .sname{{width:64px;font-size:12px;color:var(--ink-soft);flex:none}}
 .sbar{{flex:1;height:9px;border-radius:5px;background:rgba(60,40,15,.14);overflow:hidden}}
 .sbar i{{display:block;height:100%;border-radius:5px}}
 .sval{{width:26px;text-align:right;font-size:12px;font-weight:700}}
-.nextbox{{background:rgba(217,164,65,.14);border:1px dashed rgba(160,115,35,.5);border-radius:10px;padding:12px 14px;margin-top:6px}}
-.nextbox .n-main{{font-size:14px;font-weight:700;line-height:1.7;display:flex;gap:7px;align-items:baseline}}
-.nextbox .n-bak{{font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.8}}
+.nextbox{{background:rgba(217,164,65,.14);border:1px dashed rgba(160,115,35,.5);border-radius:10px;padding:14px 16px;margin-top:6px}}
+.nextbox .n-main{{font-size:14px;font-weight:700;line-height:1.8;display:flex;gap:7px;align-items:baseline}}
+.nextbox .n-bak{{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.9}}
 .completed{{margin-top:12px;font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px}}
 .completed .ic{{color:#2e7d5b}}
 .completed b.fail{{color:#c0392b}}
@@ -792,6 +798,18 @@ var PLAN_DOT = {{main:'main',backup:'backup',plan:'plan',event:'event'}};
 
 /* ═══════════════ 工具 ═══════════════ */
 function esc(s){{return String(s==null?'':s).replace(/[&<>"']/g,function(c){{return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c];}});}}
+/* 情报/推荐条目：把文末 [来源：xxx](url) 或裸 URL 转成「来源 ↗」链接，压缩密度 */
+function fmtIntel(s) {{
+  var str = String(s==null?'':s);
+  var md = str.match(new RegExp('^([\\\\s\\\\S]*)\\\\[([^\\\\]]+)\\\\]\\\\((https?://[^)\\\\s]+)\\\\)\\\\s*$'));
+  if (md) {{
+    var label = md[2].replace(new RegExp('^来源[：:] *'), '');
+    return esc(md[1].replace(new RegExp(' +$'), '')) + ' <a href="'+md[3]+'" target="_blank" rel="noopener">'+esc(label)+' ↗</a>';
+  }}
+  var url = str.match(new RegExp('(https?://[^ )]+)$'));
+  if (url) return esc(str.slice(0, url.index).replace(new RegExp(' +$'), '')) + ' <a href="'+url[1]+'" target="_blank" rel="noopener">来源 ↗</a>';
+  return esc(str);
+}}
 function ic(name,cls){{cls=cls||'';return '<svg class="ic '+cls+'" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-'+name+'"/></svg>';}}
 function moodIcon(m){{if(m==null)return '';if(m<=4)return '<span style="color:#c0392b">'+ic('frown','ic-lg')+'</span>';if(m<=7)return '<span style="color:#d9a441">'+ic('meh','ic-lg')+'</span>';return '<span style="color:#2e7d5b">'+ic('smile','ic-lg')+'</span>';}}
 var WD = ['周日','周一','周二','周三','周四','周五','周六'];
@@ -1173,8 +1191,8 @@ function openDay(iso) {{
 
   var secLst = function(title, icn, arr, color) {{
     if (!arr.length) return '';
-    return '<div class="sec"><h4>'+ic(icn,'ic-sm')+' '+title+'</h4><ul class="lst">'+
-      arr.map(function(x){{return '<li><span style="color:'+color+'">'+ic('arrow-right','ic-xs')+'</span>'+esc(x)+'</li>';}}).join('')+
+    return '<div class="sec"><h4>'+ic(icn,'ic-sm')+' '+title+'</h4><ul class="lst intel-list">'+
+      arr.map(function(x){{return '<li><span style="color:'+color+'">'+ic('arrow-right','ic-xs')+'</span>'+fmtIntel(x)+'</li>';}}).join('')+
       '</ul></div>';
   }};
 
@@ -1186,29 +1204,29 @@ function openDay(iso) {{
   }}
 
   SHEET.innerHTML =
-    '<svg class="tw" viewBox="0 0 216 76" aria-hidden="true">'+
+    '<svg class="tw" viewBox="0 0 260 88" preserveAspectRatio="xMidYMax meet" aria-hidden="true">'+
       '<!-- 纸（从滚筒后探出） -->'+
-      '<rect x="78" y="2" width="60" height="26" rx="2" fill="#faf3e2" stroke="rgba(90,60,25,.35)"/>'+
-      '<line x1="86" y1="10" x2="130" y2="10" stroke="rgba(90,60,25,.25)" stroke-width="2" stroke-linecap="round"/>'+
-      '<line x1="86" y1="16" x2="122" y2="16" stroke="rgba(90,60,25,.18)" stroke-width="2" stroke-linecap="round"/>'+
+      '<rect x="98" y="2" width="64" height="28" rx="2" fill="#faf3e2" stroke="rgba(90,60,25,.35)"/>'+
+      '<line x1="107" y1="11" x2="153" y2="11" stroke="rgba(90,60,25,.25)" stroke-width="2" stroke-linecap="round"/>'+
+      '<line x1="107" y1="17" x2="143" y2="17" stroke="rgba(90,60,25,.18)" stroke-width="2" stroke-linecap="round"/>'+
       '<!-- 滚筒 -->'+
-      '<rect x="64" y="24" width="88" height="16" rx="8" fill="#4a2e14"/>'+
-      '<rect x="64" y="24" width="88" height="6" rx="3" fill="rgba(255,255,255,.14)"/>'+
+      '<rect x="76" y="26" width="108" height="18" rx="9" fill="#4a2e14"/>'+
+      '<rect x="76" y="26" width="108" height="7" rx="3.5" fill="rgba(255,255,255,.14)"/>'+
       '<!-- 左右旋钮（旋转） -->'+
-      '<circle class="tw-knob" cx="52" cy="32" r="10" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
-      '<line class="tw-knob" x1="52" y1="26" x2="52" y2="32" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
-      '<circle class="tw-knob" cx="164" cy="32" r="10" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
-      '<line class="tw-knob" x1="164" y1="26" x2="164" y2="32" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
-      '<!-- 机身 -->'+
-      '<path d="M40 40 h136 l10 22 h-156 z" fill="#7c512b" stroke="#3a2a10" stroke-width="2" stroke-linejoin="round"/>'+
-      '<rect x="52" y="52" width="112" height="10" rx="3" fill="#4a2e14"/>'+
+      '<circle class="tw-knob" cx="60" cy="35" r="12" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
+      '<line class="tw-knob" x1="60" y1="28" x2="60" y2="35" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
+      '<circle class="tw-knob" cx="200" cy="35" r="12" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
+      '<line class="tw-knob" x1="200" y1="28" x2="200" y2="35" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
+      '<!-- 机身：比单据更宽 -->'+
+      '<path d="M26 46 h208 l14 28 h-236 z" fill="#7c512b" stroke="#3a2a10" stroke-width="2" stroke-linejoin="round"/>'+
+      '<rect x="44" y="60" width="172" height="11" rx="3" fill="#4a2e14"/>'+
       '<!-- 键盘键帽 -->'+
       '<g fill="#e6cda0">'+
-        '<circle cx="72" cy="47" r="3.2"/><circle cx="84" cy="47" r="3.2"/><circle cx="96" cy="47" r="3.2"/>'+
-        '<circle cx="108" cy="47" r="3.2"/><circle cx="120" cy="47" r="3.2"/><circle cx="132" cy="47" r="3.2"/>'+
-        '<circle cx="144" cy="47" r="3.2"/>'+
+        '<circle cx="72" cy="55" r="3.6"/><circle cx="86" cy="55" r="3.6"/><circle cx="100" cy="55" r="3.6"/>'+
+        '<circle cx="114" cy="55" r="3.6"/><circle cx="128" cy="55" r="3.6"/><circle cx="142" cy="55" r="3.6"/>'+
+        '<circle cx="156" cy="55" r="3.6"/><circle cx="170" cy="55" r="3.6"/><circle cx="184" cy="55" r="3.6"/>'+
       '</g>'+
-      '<rect x="98" y="55" width="20" height="5" rx="2" fill="#e6cda0"/>'+
+      '<rect x="112" y="64" width="36" height="5.5" rx="2" fill="#e6cda0"/>'+
     '</svg>'+
     '<div class="paper-window"><div class="sheet-body">'+
     '<div class="m-head">'+
@@ -1219,7 +1237,6 @@ function openDay(iso) {{
         '<button class="m-btn'+(PRINT_ON?'':' off')+'" id="mfx-toggle">'+(PRINT_ON?'效果 开':'效果 关')+'</button>'+
         '<button class="m-btn" id="mexport">'+ic('download','ic-sm')+' 导出图片</button>'+
         '<button class="m-btn m-close" id="mclose">'+ic('x')+'</button></div></div>'+
-    '<div class="perforation"></div>'+
     '<div class="rc-cols">'+
       '<div class="rc-col">'+
         '<div class="sec"><h4>'+ic('check-circle','ic-sm')+' 完成</h4>'+lst(done,'done')+'</div>'+
