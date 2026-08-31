@@ -635,12 +635,12 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
   url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n2"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feColorMatrix type="matrix" values="0 0 0 0 0.5 0 0 0 0 0.38 0 0 0 0 0.22 0 0 0 0.07 0"/></filter><rect width="140" height="140" filter="url(%23n2)"/></svg>'),
   linear-gradient(180deg,#fbf5e4,#f3e6ca);
   padding:14px 30px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(120,85,40,.15)}}
-/* 两侧链轮定位孔条（tractor feed）+ 内侧撕离虚线 */
+/* 两侧链轮定位孔条（tractor feed）+ 内侧撕离虚线：孔居条中央，虚线贴纸面一侧 */
 .sheet-body::before,.sheet-body::after{{content:'';position:absolute;top:8px;bottom:8px;width:16px;background:
-  radial-gradient(circle 3.5px at 8px 12px,rgba(28,16,5,.5) 3.2px,transparent 3.6px) 0 0/16px 26px repeat-y,
+  radial-gradient(circle 3.5px at 8px 13px,rgba(28,16,5,.5) 3.2px,transparent 3.6px) 0 0/16px 26px repeat-y,
   linear-gradient(90deg,rgba(120,85,40,.10),rgba(120,85,40,.02));}}
 .sheet-body::before{{left:3px;border-right:1px dashed rgba(120,85,40,.35)}}
-.sheet-body::after{{right:3px;border-left:1px dashed rgba(120,85,40,.35);transform:scaleX(-1)}}
+.sheet-body::after{{right:3px;border-left:1px dashed rgba(120,85,40,.35)}}
 /* 打字机 + 出纸窗口：纸张整体从滚筒后向下滑出，底边（单据尾部）先露出 */
 .tw{{display:block;position:relative;z-index:4;margin:2px auto -2px;width:216px;height:76px}}
 .paper-window{{overflow:hidden}}
