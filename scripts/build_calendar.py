@@ -580,10 +580,10 @@ header{{text-align:center;margin-bottom:22px}}
 .c-meta{{font-size:11px;color:var(--ink-soft);display:flex;justify-content:space-between;align-items:center}}
 .c-meta .m-l{{display:flex;align-items:center;gap:3px;letter-spacing:.5px}}
 .c-meta .mi{{color:#7a9b6a}}
-.cell.today .card{{border:2px solid var(--gold);box-shadow:0 3px 6px rgba(0,0,0,.5),inset 0 0 18px rgba(130,85,35,.15)}}
+.cell.today .card{{border:2px solid var(--gold);padding-top:27px;box-shadow:0 3px 6px rgba(0,0,0,.5),inset 0 0 18px rgba(130,85,35,.15)}}
 .cell.today .card:hover{{box-shadow:0 14px 20px rgba(0,0,0,.55),0 0 0 2px var(--gold)}}
 .cell.today .tape{{background:rgba(240,205,120,.75)}}
-.ribbon{{position:absolute;top:-9px;right:-5px;z-index:2;background:var(--gold);color:#3a2a10;font-size:10px;font-weight:700;padding:2px 8px;border-radius:0 9px 0 9px;letter-spacing:1px;box-shadow:0 2px 3px rgba(0,0,0,.4);animation:glow 2.6s ease-in-out infinite}}
+.ribbon{{position:absolute;top:0;right:0;z-index:2;background:var(--gold);color:#3a2a10;font-size:10px;font-weight:700;padding:2px 8px;border-radius:0 6px 0 9px;letter-spacing:1px;box-shadow:0 2px 3px rgba(0,0,0,.4);animation:glow 2.6s ease-in-out infinite}}
 @keyframes glow{{0%,100%{{box-shadow:0 0 0 rgba(217,164,65,0)}}50%{{box-shadow:0 0 14px rgba(217,164,65,.85)}}}}
 
 /* 计划卡 */
@@ -740,8 +740,8 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 <script src="vendor/html2canvas.min.js"></script>
 <script>
 /* ═══════════════ 全局状态 ═══════════════ */
-var GHB = null;          // 由 data/index.js（或内联）设置
-var DATA = {{}};          // 按月累积 window.DATA
+var GHB = window.GHB || null;          // 由 data/index.js（或内联）设置，勿覆盖
+var DATA = window.DATA || {{}};          // 按月累积 window.DATA
 var CURRENT_MONTH = null;
 var MONTH_LIST = [];
 var EXPORT_ISO = null;
