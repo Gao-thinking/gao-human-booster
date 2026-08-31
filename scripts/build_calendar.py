@@ -621,35 +621,53 @@ header{{text-align:center;margin-bottom:22px}}
 footer{{text-align:center;margin-top:22px;color:#b99a6b;font-size:12px;letter-spacing:1px;line-height:1.9}}
 footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;border-radius:4px;font-size:11px}}
 
-/* 弹层 */
+/* 弹层：打字机吐出的热敏单据 */
 .modal{{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50;padding:20px}}
 .modal.open{{display:flex}}
 .overlay{{position:absolute;inset:0;background:rgba(18,9,3,.62);backdrop-filter:blur(3px)}}
-.sheet{{position:relative;width:min(560px,94vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n2"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feColorMatrix type="matrix" values="0 0 0 0 0.5 0 0 0 0 0.38 0 0 0 0 0.22 0 0 0 0.07 0"/></filter><rect width="140" height="140" filter="url(%23n2)"/></svg>'),linear-gradient(180deg,var(--paper),#f3e6ca);border-radius:14px;padding:22px 24px 20px;box-shadow:0 24px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.7);transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s}}
+.sheet{{position:relative;width:min(560px,94vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:transparent;border-radius:12px;padding:6px 2px 2px;box-shadow:0 24px 60px rgba(0,0,0,.6);transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}}
 .modal.open .sheet{{transform:scale(1);opacity:1}}
 .sheet::-webkit-scrollbar{{display:none}}
 /* 打印机吐卡效果 */
-.sheet-body{{position:relative}}
-/* 整张纸从纸槽作为一个整体滑出 */
-.sheet.printing .sheet-body{{clip-path:inset(0 0 100% 0);transform:translateY(-26px);animation:print-feed 1.15s cubic-bezier(.25,.5,.35,1) .05s forwards}}
-.sheet.printing::after{{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:62%;height:9px;background:rgba(43,28,12,.9);border-radius:5px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.45);z-index:3;pointer-events:none;animation:print-slot 1.35s ease .05s both}}
-.modal.open .sheet.printing{{animation:print-jitter .13s linear 10}}
+/* 单据纸身：热敏纸质感 + 横向细纹 + 上下锯齿撕边 */
+.sheet-body{{position:relative;background:
+  repeating-linear-gradient(180deg,rgba(120,85,40,.045) 0 1px,transparent 1px 4px),
+  url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n2"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3"/><feColorMatrix type="matrix" values="0 0 0 0 0.5 0 0 0 0 0.38 0 0 0 0 0.22 0 0 0 0.07 0"/></filter><rect width="140" height="140" filter="url(%23n2)"/></svg>'),
+  linear-gradient(180deg,#fbf5e4,#f3e6ca);
+  padding:14px 22px 18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(120,85,40,.15)}}
+/* 打字机 + 缓慢吐纸 */
+.tw{{display:block;margin:2px auto -2px;width:216px;height:76px}}
+.tw .tw-knob{{transform-box:fill-box;transform-origin:center}}
+.sheet.printing .tw .tw-knob{{animation:tw-knob 2.4s linear .05s}}
+@keyframes tw-knob{{to{{transform:rotate(360deg)}}}}
+/* 单据作为整体从滚筒下缓慢吐出，带收据锯齿边 */
+.sheet.printing .sheet-body{{clip-path:inset(0 0 100% 0);transform:translateY(-16px);animation:print-feed 2.4s linear .05s forwards}}
+.sheet.printing .sheet-body::after{{content:'';position:absolute;left:0;right:0;bottom:-10px;height:10px;background:linear-gradient(-45deg,transparent 7px,#f3e6ca 0) 0 0/14px 14px,linear-gradient(45deg,transparent 7px,#f3e6ca 0) 7px 0/14px 14px;background-repeat:repeat-x}}
+/* 压纸杆：纸从其下方钻出，吐完淡出 */
+.sheet.printing::after{{content:'';position:absolute;top:86px;left:50%;transform:translateX(-50%);width:64%;height:8px;background:rgba(43,28,12,.92);border-radius:4px;box-shadow:0 2px 5px rgba(0,0,0,.35),inset 0 -2px 0 rgba(0,0,0,.4);z-index:3;pointer-events:none;animation:print-slot 2.55s ease .05s both}}
+.modal.open .sheet.printing{{animation:print-jitter .26s linear 9}}
 .m-btn.off{{opacity:.45}}
-@keyframes print-feed{{to{{clip-path:inset(0 0 -12px 0);transform:translateY(0)}}}}
+@keyframes print-feed{{0%{{clip-path:inset(0 0 100% 0);transform:translateY(-16px)}}100%{{clip-path:inset(0 0 -14px 0);transform:translateY(0)}}}}
 @keyframes print-jitter{{0%,100%{{transform:scale(1) translateY(0)}}50%{{transform:scale(1) translateY(1px)}}}}
-@keyframes print-slot{{0%,80%{{opacity:1}}100%{{opacity:0}}}}
-@media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none;transform:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}}}
-.m-head{{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:6px}}
+@keyframes print-slot{{0%,86%{{opacity:1}}100%{{opacity:0}}}}
+@media (prefers-reduced-motion: reduce){{.sheet.printing .sheet-body{{animation:none;clip-path:none;transform:none}}.sheet.printing .sheet-body::after{{display:none}}.sheet.printing::after{{display:none}}.modal.open .sheet.printing{{animation:none}}.sheet.printing .tw .tw-knob{{animation:none}}}}
+.m-head{{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-right:6px;border-bottom:2px dashed rgba(120,85,40,.35);padding-bottom:10px;margin-bottom:4px}}
 .m-actions{{display:flex;gap:8px;align-items:center;flex:none}}
 .m-btn{{border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:rgba(90,60,25,.12);color:var(--ink);font-size:12px;border-radius:8px;padding:6px 9px;transition:background .15s;line-height:1}}
 .m-btn:hover{{background:rgba(90,60,25,.25)}}
 .m-btn .ic{{width:13px;height:13px}}
 .m-close{{width:30px;height:30px;border-radius:50%;justify-content:center;padding:0}}
 .m-close .ic{{width:13px;height:13px}}
-.m-date{{font-family:"Songti SC",serif;font-size:22px;font-weight:700;letter-spacing:1px}}
-.m-wd{{font-size:13px;color:var(--ink-soft);margin-top:4px;display:flex;align-items:center;gap:8px}}
+.m-date{{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:21px;font-weight:700;letter-spacing:2px}}
+.m-wd{{font-size:12px;color:var(--ink-soft);margin-top:5px;display:flex;align-items:center;gap:8px;font-family:monospace;letter-spacing:1px}}
+/* 穿孔撕线（单据中缝，便于"撕下"的感觉） */
+.perforation{{position:relative;height:0;border-top:2px dashed rgba(120,85,40,.35);margin:14px -22px 10px}}
+.perforation::before,.perforation::after{{content:'';position:absolute;top:-7px;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.22),rgba(0,0,0,.08) 55%,transparent 60%)}}
+.perforation::before{{left:-7px}}
+.perforation::after{{right:-7px}}
 .sec{{margin-top:14px}}
-.sec h4{{font-size:13px;letter-spacing:2px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}}
+.sec h4{{font-size:12px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
+.sec h4::after{{content:'· · ·';margin-left:auto;letter-spacing:2px;color:rgba(120,85,40,.3);font-weight:700;font-style:normal}}
 .lst{{list-style:none}}
 .lst li{{padding:3px 0;font-size:14px;line-height:1.55;color:var(--ink);display:flex;gap:7px;align-items:baseline}}
 .lst li .ic{{flex:none;transform:translateY(1px)}}
@@ -1153,6 +1171,30 @@ function openDay(iso) {{
   }}
 
   SHEET.innerHTML =
+    '<svg class="tw" viewBox="0 0 216 76" aria-hidden="true">'+
+      '<!-- 纸（从滚筒后探出） -->'+
+      '<rect x="78" y="2" width="60" height="26" rx="2" fill="#faf3e2" stroke="rgba(90,60,25,.35)"/>'+
+      '<line x1="86" y1="10" x2="130" y2="10" stroke="rgba(90,60,25,.25)" stroke-width="2" stroke-linecap="round"/>'+
+      '<line x1="86" y1="16" x2="122" y2="16" stroke="rgba(90,60,25,.18)" stroke-width="2" stroke-linecap="round"/>'+
+      '<!-- 滚筒 -->'+
+      '<rect x="64" y="24" width="88" height="16" rx="8" fill="#4a2e14"/>'+
+      '<rect x="64" y="24" width="88" height="6" rx="3" fill="rgba(255,255,255,.14)"/>'+
+      '<!-- 左右旋钮（旋转） -->'+
+      '<circle class="tw-knob" cx="52" cy="32" r="10" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
+      '<line class="tw-knob" x1="52" y1="26" x2="52" y2="32" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
+      '<circle class="tw-knob" cx="164" cy="32" r="10" fill="#6b4426" stroke="#3a2a10" stroke-width="2"/>'+
+      '<line class="tw-knob" x1="164" y1="26" x2="164" y2="32" stroke="#e6cda0" stroke-width="2" stroke-linecap="round"/>'+
+      '<!-- 机身 -->'+
+      '<path d="M40 40 h136 l10 22 h-156 z" fill="#7c512b" stroke="#3a2a10" stroke-width="2" stroke-linejoin="round"/>'+
+      '<rect x="52" y="52" width="112" height="10" rx="3" fill="#4a2e14"/>'+
+      '<!-- 键盘键帽 -->'+
+      '<g fill="#e6cda0">'+
+        '<circle cx="72" cy="47" r="3.2"/><circle cx="84" cy="47" r="3.2"/><circle cx="96" cy="47" r="3.2"/>'+
+        '<circle cx="108" cy="47" r="3.2"/><circle cx="120" cy="47" r="3.2"/><circle cx="132" cy="47" r="3.2"/>'+
+        '<circle cx="144" cy="47" r="3.2"/>'+
+      '</g>'+
+      '<rect x="98" y="55" width="20" height="5" rx="2" fill="#e6cda0"/>'+
+    '</svg>'+
     '<div class="sheet-body">'+
     '<div class="m-head">'+
       '<div><div class="m-date">'+iso+'</div>'+
