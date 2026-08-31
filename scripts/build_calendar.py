@@ -675,7 +675,9 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .perforation::after{{right:-6px}}
 /* 双栏模块化排版：呼吸感优先 */
 .rc-cols{{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;align-items:start}}
-.rc-col{{min-width:0}}
+.rc-col{{min-width:0;max-width:100%;overflow-wrap:break-word;word-break:break-word}}
+.rc-col .lst li{{white-space:normal;overflow-wrap:anywhere}}
+.rc-col .srow{{min-width:0}}
 @media (max-width:640px){{.rc-cols{{grid-template-columns:1fr;gap:0}}.rc-col+.rc-col{{border-top:2px dotted rgba(120,85,40,.3);margin-top:14px;padding-top:4px}}}}
 .sec{{margin-top:16px}}
 .sec:first-child{{margin-top:2px}}
