@@ -628,7 +628,7 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .modal{{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50;padding:20px}}
 .modal.open{{display:flex}}
 .overlay{{position:absolute;inset:0;background:rgba(18,9,3,.62);backdrop-filter:blur(3px)}}
-.sheet{{position:relative;width:min(660px,96vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:transparent;border-radius:12px;padding:6px 2px 2px;box-shadow:0 24px 60px rgba(0,0,0,.6);transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}}
+.sheet{{position:relative;width:min(660px,96vw);max-height:88vh;overflow:auto;scrollbar-width:none;-ms-overflow-style:none;background:transparent;border-radius:12px;padding:6px 2px 2px;transform:scale(.94);opacity:0;transition:transform .22s cubic-bezier(.2,.9,.3,1.3),opacity .18s;filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}}
 .modal.open .sheet{{transform:scale(1);opacity:1}}
 .sheet::-webkit-scrollbar{{display:none}}
 /* 打印机吐卡效果 */
