@@ -581,6 +581,9 @@ header{{text-align:center;margin-bottom:22px}}
 .c-meta .m-l{{display:flex;align-items:center;gap:3px;letter-spacing:.5px}}
 .c-meta .mi{{color:#7a9b6a}}
 .cell.today .card{{border:2px solid var(--gold);padding-top:27px;box-shadow:0 3px 6px rgba(0,0,0,.5),inset 0 0 18px rgba(130,85,35,.15)}}
+/* 打开页面时当天格子脉冲提醒 */
+.cell.today-ping .card{{animation:today-ping 1.2s ease-in-out 2}}
+@keyframes today-ping{{0%,100%{{box-shadow:0 3px 6px rgba(0,0,0,.5),inset 0 0 18px rgba(130,85,35,.15)}}50%{{box-shadow:0 3px 6px rgba(0,0,0,.5),0 0 0 5px rgba(217,164,65,.55),inset 0 0 18px rgba(130,85,35,.3)}}}}
 .cell.today .card:hover{{box-shadow:0 14px 20px rgba(0,0,0,.55),0 0 0 2px var(--gold)}}
 .cell.today .tape{{background:rgba(240,205,120,.75)}}
 .ribbon{{position:absolute;top:0;right:0;z-index:2;background:var(--gold);color:#3a2a10;font-size:10px;font-weight:700;padding:2px 8px;border-radius:0 6px 0 9px;letter-spacing:1px;box-shadow:0 2px 3px rgba(0,0,0,.4);animation:glow 2.6s ease-in-out infinite}}
@@ -1070,12 +1073,22 @@ function init() {{
       renderStats();
       renderTodayBanner();
       renderMonth(CURRENT_MONTH);
+      focusToday();
     }});
   }} else {{
     renderStats();
     renderTodayBanner();
   }}
   populateMonthSelect();
+
+  /* 打开页面时自动聚焦当天格子（高亮 + 滚动到可视区，不弹详情） */
+  function focusToday() {{
+    var cell = document.querySelector('.cell.today');
+    if (!cell) return;
+    cell.classList.add('today-ping');
+    cell.scrollIntoView({{block:'center', behavior:'smooth'}});
+    setTimeout(function() {{ cell.classList.remove('today-ping'); }}, 2600);
+  }}
 
   document.getElementById('prevMonth').addEventListener('click', function() {{
     var i = MONTH_LIST.indexOf(CURRENT_MONTH);
