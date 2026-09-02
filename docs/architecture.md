@@ -12,8 +12,9 @@
    - `data/index.js`：汇总（领域后验、各月存在性、计划总数、版本）。约 1–2KB。
    - `data/YYYY-MM.js`：单月数据（`window.DATA['YYYY-MM'] = {...}`），每文件约 1–4KB，浏览器**按需加载**。
    - 渲染只取当前月起最近 12 个月 + 未来 6 个月；历史月仍可在日历里翻看（按月懒加载）。
-4. **开挂引擎（第五框架）**：复利 × 杠杆 × 情报。复利盘点进周复盘；情报补给进每日复盘（基于 profile.interests 联网检索）；推荐库（library.json）防重复推荐并跟进。
-5. **可选 GitHub 备份**：`make backup-init REMOTE=<url>` 启用后，`daily/` + `state/` 镜像到独立的本地备份仓库（`~/.agents/ghb-backup`）并推送到用户指定的 GitHub 私有仓库。**默认关闭，非必选**。
+4. **开挂引擎（第五框架）**：复利 × 杠杆 × 情报 × 极致。复利盘点进周复盘；情报补给进每日复盘（基于 profile.interests 联网检索）；推荐库（library.json）防重复推荐并跟进；**极致引擎（构建时自动计算）**：重复行动模板识别（归一化指纹）→ ⚡第 N 次标记 → 完成率前后对比产出"越做越轻松"信号，供周复盘极致审计（模板化/自动化/砍掉三判）。
+5. **增益系统（正向 buff）**：构建时按天自动推导 4 个 buff（连击🔥/动能🌊/回血🔋/复利⚡），优先级 recovery > momentum > streak > mastery，一天最多 1 个，未来日期不授予；出口为 `GHB.buff`（今日）与 `days[].buff`（历史）。只顺风加量、低谷减负，不追加义务。
+6. **可选 GitHub 备份**：`make backup-init REMOTE=<url>` 启用后，`daily/` + `state/` 镜像到独立的本地备份仓库（`~/.agents/ghb-backup`）并推送到用户指定的 GitHub 私有仓库。**默认关闭，非必选**。
 
 ## 2. 目录布局
 
@@ -82,15 +83,17 @@ init.py 若发现 state 缺失，用 `state.example/*.json` 模板初始化（�
 
 ```js
 window.GHB = {
-  "version": "v1.1.0",
-  "name": "gao",
-  "role": "创业者",
+  "version": "v1.2.0",
+  "name": "",
+  "role": "",
   "months": ["2026-08"],
   "current": "2026-08",
   "today": "2026-08-29",
   "domains": { "工作/事业": {score:0.517, streak:2, best:2, color:"#c05b24", job:"...", status:"active"}, ... },
   "plans": {"2026-08-29": [ {id, text, kind, domain, done} ]},  // 只含 today 起 14 天内 && 未完成 && kind!=backup（页首横幅用）
   "worries_open": 1,
+  "buff": "streak",          // 今日 buff（null=无）：streak|momentum|recovery|mastery
+  "mastery": [ {"label":"...","count":5,"doneRate":0.8,"easing":true,"domain":"...","last":"..."} ],  // 极致行动榜 Top3
   "meta": {"generated": "2026-08-29", "total_days": 3}
 }
 ```
@@ -106,16 +109,18 @@ window.DATA = window.DATA || {};
 window.DATA["2026-08"] = {
   "year": 2026, "month": 8,
   "days": {
-    "2026-08-27": {"capture": {"done":[...],"undone":[...],"worries":[...]}, "scores": {...}, "next": {...}, "mood": 7, "completed": true, "intel": [...], "recs": [...]}
+    "2026-08-27": {"capture": {"done":[...],"undone":[...],"worries":[...]}, "scores": {...}, "next": {...}, "mood": 7, "completed": true, "intel": [...], "recs": [...], "buff": "streak"}
   },
   "plans": {
-    "2026-08-28": [ {"id":"P-...","text":"...","kind":"main","domain":"工作/事业","done":false} ]
-  }
+    "2026-08-28": [ {"id":"P-...","text":"...","kind":"main","domain":"工作/事业","done":false,"reps":3,"rep_total":5} ]
+  },
+  "mastery": [ {"label":"...","count":5,"doneRate":0.8,"easing":true,"domain":"...","last":"..."} ]
 };
 ```
 
-- `days`：该月内所有有记录的日子（key=date）。`intel`/`recs` 为该日情报补给与推荐（弹层/导出卡显示）。
-- `plans`：**该月内所有计划**（含已完成/已过期），按 date 分组。
+- `days`：该月内所有有记录的日子（key=date）。`intel`/`recs` 为该日情报补给与推荐（弹层/导出卡显示）；`buff` 为该日生效的增益。
+- `plans`：**该月内所有计划**（含已完成/已过期），按 date 分组；`reps`/`rep_total` 为极致引擎的重复标记（reps≥2 时弹层显示 ⚡第 N 次）。
+- `mastery`：极致行动榜 Top3（重复行动 + 完成率 + easing「越做越轻松」信号）。
 - 渲染时按"当月 1 号往前推 11 个月"作为加载范围（共 12 个月）。未来只允许翻到**当月 + 6 个月**。
 
 ### 4.3 构建规则（build_calendar.py）
@@ -141,12 +146,13 @@ window.DATA["2026-08"] = {
 
 ### 5.3 弹层（点格子）
 
-- 复盘卡 → 完成/未完成/担心/领域评分/**情报补给**/**推荐**/计划/专家点评/明日行动/完成回填。
+- **单列纵向排版**：完成 → 未完成 → 担心/情绪 → 领域评分 → 情报补给 → 推荐 → 专家点评 → 计划 → 明日行动 → 完成回填，自上而下（v1.2 起弃用双栏 `.rc-cols`）。
+- 今日弹层在「明日行动」下方显示 buff 行（增益说明）；计划条目重复 ≥2 次显示 `⚡第N次` 标记。
 - 计划卡 → 计划区（完成状态由晚间复盘回填，弹层内注明）。
 
 ### 5.4 导出图片
 
-保留 html2canvas 每日卡导出；导出卡加入情报补给/推荐摘要（若有）。
+保留 html2canvas 每日卡导出；**导出卡同样单列纵向**（完成/未完成/担心为独立区块，v1.2 起弃用三栏 `.ex-cols`）；含情报补给/推荐摘要与今日 buff（若有）。
 
 ### 5.5 其它保留
 

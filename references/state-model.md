@@ -21,7 +21,7 @@
 
 ```json
 {
-  "user": {"name": "gao", "role": "创业者", "wake_time": "08:00", "sleep_time": "22:00"},
+  "user": {"name": "", "role": "", "wake_time": "08:00", "sleep_time": "22:00"},
   "review": {"preferred_time": "21:00", "remind": true, "skip_weekend": false},
   "rules": ["23:00 后不展开复盘", "不做需要过度依赖他人的事业"],
   "energy": {"peak": "morning"},
@@ -233,8 +233,33 @@ beta  += (1 - avg) × 评分天数
 
 `data/` 是构建产物（git 忽略），由 `scripts/build_calendar.py` 读取 `daily/*.mdx` + `state/*.json` 生成：
 
-- `data/index.js`：`window.GHB = {version, months[], current, today, domains{}, plans{}, worries_open, meta}` — 领域当前后验、有数据的月份列表、未来 14 天计划（页首横幅）。
-- `data/YYYY-MM.js`：`window.DATA["YYYY-MM"] = {year, month, days{}, plans{}, expert{}}` — 单月复盘 + 计划 + 专家点评 + 情报补给/推荐，浏览器按需加载。
+- `data/index.js`：`window.GHB = {version, months[], current, today, domains{}, plans{}, worries_open, buff, mastery[], meta}` — 领域当前后验、有数据的月份列表、未来 14 天计划（页首横幅）、**今日 buff（连击🔥/动能🌊/回血🔋/复利⚡，null=无）**、**极致行动榜**。
+- `data/YYYY-MM.js`：`window.DATA["YYYY-MM"] = {year, month, days{}, plans{}, expert{}, mastery[]}` — 单月复盘 + 计划 + 专家点评 + 情报补给/推荐，浏览器按需加载。
+
+## 极致引擎与增益系统（构建时自动计算，无需人工标记）
+
+### 重复行动识别（⚡极致行动）
+
+- **指纹归一**：计划文本去数字/空白/标点后取公共前缀（≥8 字视为同一模板）——"法语 MAKE 第 1/2/3 天"自动归一为同一行动。
+- 每条计划获得 `reps`（第几次）/ `rep_total`（共几次）；事件（event）不参与。
+- `mastery`（index 与每月数据各带前三名）：`{label, count, doneRate, easing, domain, last}`；**easing=true 表示完成率后半段>前半段（n≥4）→ "越做越轻松"信号**。
+- 展示：弹层计划条目 `⚡第N次` 标记；日历页「极致行动」牌；周复盘极致审计的数据源（SKILL §5.6）。
+
+### Buff 推导（作用于当日，来自前一日证据/连续模式/极致行动）
+
+```
+一天最多 1 个，优先级：recovery > momentum > streak > mastery；未来日期不授予。
+
+recovery（🔋回血）：昨日均分 < 0.3            → 今天只做一件事，做完即赢
+momentum（🌊动能）：昨日均分 ≥ 0.6 且 ≥3 领域达标 → 顺风加一个 30 分钟进阶挑战
+streak（🔥连击）：  有领域连续 ≥3 天达标(r≥0.5)  → 主行动顺势排该领域
+mastery（⚡复利）：  今天含重复 ≥3 次的主/普通计划 → 目标：比上次更省力
+```
+
+- 连续天数按"无证据不打断"累计（r≥0.5 → +1；r<0.5 → 归零；当天无评分不重置）。
+- 今天没有 mdx 总结条目时也能拿 buff（继承最后已知的连续状态）。
+- 数据出口：`GHB.buff`（今日）、`days[iso].buff`（历史某天）；页面在「今日概览」牌、弹层 buff 行、导出图卡三处展示。
+- 设计红线：**buff 只正向**——顺风加量、低谷减负，绝不追加义务或制造内疚。
 
 构建规则：读取全部 daily/*.mdx → 生成当前月 + 所有有数据/计划的月份文件 → 壳 HTML 动态 `<script>` 加载（file:// 安全）。幂等，可重复跑。
 
@@ -250,5 +275,6 @@ beta  += (1 - avg) × 评分天数
 | 6 | 连续 3 次复盘耗时 >15 分钟 | 收紧协议：砍掉 3.1 或 3.2 一步 |
 | 7 | 同一计划连续 3 次过期未完成 | 提议缩小为 30 分钟一步或删除（数据源 daily/*.mdx 计划区） |
 | 8 | library 某推荐 2 周无反馈 | 周复盘追问"上次推荐看了吗"→ 更新 library status |
+| 9 | 同一极致行动连续 2 周更累/完成率下降（mastery.doneRate 前后对比） | JTBD 重访谈 + 极致三判（模板化/自动化/砍掉），数据源 mastery 列表 |
 
 判定用**运行中的真实数据**，禁止凭空推断；单次偶发不触发（贝叶斯：先验不变，连续模式才更新）。

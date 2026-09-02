@@ -476,8 +476,142 @@ def expert_for_day(d, dom_payload):
     return out
 
 
+# ── 极致引擎：重复行动识别 + buff 增益推导（全部由证据自动计算，无人工负担） ──
+TPL_MIN_LEN = 8   # 归一化后公共前缀 ≥8 字视为同一行动模板
+
+
+def _tpl_fingerprint(text: str) -> str:
+    """计划文本 → 模板指纹：去数字/空白/标点，让「法语 MAKE 第 1/2/3 天」归一为同一模板"""
+    s = str(text or "")
+    s = re.sub(r"[0-9０-９]+", "", s)
+    s = re.sub(r"\s+", "", s)
+    s = re.sub(r"[，。：；！？、,.;:!?\-—…（）()\[\]【】\"'“”‘’｜··]", "", s)
+    return s
+
+
+def _common_prefix_len(a: str, b: str) -> int:
+    n = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        n += 1
+    return n
+
+
+def annotate_repeats(plans_by_date: dict):
+    """识别重复行动：给每条计划打 reps(第几次) / rep_total(共几次)；
+    返回 mastery 列表（出现 ≥2 次，按次数降序）：
+      {label, count, doneRate, easing(完成率后半>前半 → 越做越轻), domain, last}"""
+    groups = []
+    for date in sorted(plans_by_date):
+        for p in plans_by_date[date]:
+            if p.get("kind") == "event":
+                continue
+            fp = _tpl_fingerprint(p.get("text", ""))
+            if len(fp) < TPL_MIN_LEN:
+                continue
+            hit = None
+            for g in groups:
+                if _common_prefix_len(g["fp"], fp) >= TPL_MIN_LEN:
+                    hit = g
+                    break
+            if hit is None:
+                hit = {"fp": fp, "items": []}
+                groups.append(hit)
+            hit["items"].append((date, p))
+    mastery = []
+    for g in groups:
+        items = g["items"]
+        if len(items) < 2:
+            continue
+        items.sort(key=lambda x: x[0])
+        n = len(items)
+        half = max(1, n // 2)
+
+        def _rate(seg):
+            seg = [1 if p.get("done") else 0 for _, p in seg]
+            return sum(seg) / len(seg) if seg else 0.0
+
+        easing = n >= 4 and _rate(items[half:]) > _rate(items[:half])
+        label = max((p.get("text", "") for _, p in items), key=len)[:36]
+        domains = [p.get("domain", "") for _, p in items if p.get("domain")]
+        mastery.append({
+            "label": label,
+            "count": n,
+            "doneRate": round(_rate(items), 2),
+            "easing": easing,
+            "domain": domains[0] if domains else "",
+            "last": items[-1][0],
+        })
+        for i, (_, p) in enumerate(items, 1):
+            p["reps"] = i
+            p["rep_total"] = n
+    mastery.sort(key=lambda m: (-m["count"], m["last"]))
+    return mastery
+
+
+def _daily_domain_streaks(days: dict) -> dict:
+    """{iso: {领域: 截至当天的连续达标天数(r≥0.5)}}——无证据不打断连续"""
+    run, out = {}, {}
+    for iso in sorted(days):
+        scores = days[iso].get("scores") or {}
+        for name in set(run) | set(scores):
+            r = scores.get(name)
+            if r is None:
+                continue
+            run[name] = run.get(name, 0) + 1 if r >= 0.5 else 0
+        out[iso] = dict(run)
+    return out
+
+
+BUFF_META = {
+    "streak":   {"name": "连击", "desc": "有领域连续 3 天以上达标——手感正热，主行动顺势排它，乘势而上"},
+    "momentum": {"name": "动能", "desc": "昨天多线推进——顺风日，可以加一个 30 分钟进阶挑战，加量不加时"},
+    "recovery": {"name": "回血", "desc": "昨天是低能日——今天只做一件事，做完即赢；恢复是战略，不是偷懒"},
+    "mastery":  {"name": "复利", "desc": "今天要做的是重复 3 次以上的极致行动——目标：比上次更省力"},
+}
+
+
+def build_buffs(days: dict, plans_by_date: dict) -> dict:
+    """按天推导 buff（作用于当日；来自前一日证据/连续模式/极致行动）。
+    一天最多 1 个，优先级：recovery > momentum > streak > mastery。
+    全部正向：buff 只会给「顺风加量」或「低谷减负」，绝不追加义务。"""
+    streaks = _daily_domain_streaks(days)
+    last_run = list(streaks.values())[-1] if streaks else {}
+    today_iso = datetime.date.today().isoformat()
+    # 今天必须参与判定（可能还没有 mdx 总结条目）
+    iso_list = sorted(set(list(days) + list(plans_by_date) + [today_iso]))
+    out = {}
+    for i, iso in enumerate(iso_list):
+        if iso > today_iso:
+            continue  # buff 是"今天的增益"，未来日期不授予
+        prev = days.get(iso_list[i - 1]) if i > 0 else None
+        b = None
+        if prev:
+            vals = list((prev.get("scores") or {}).values())
+            if vals:
+                avg = sum(vals) / len(vals)
+                hot = sum(1 for v in vals if v >= 0.5)
+                if avg < 0.3:
+                    b = "recovery"
+                elif avg >= 0.6 and hot >= 3:
+                    b = "momentum"
+        if b is None and any(
+            st >= 3 for st in (streaks.get(iso) if iso in streaks else last_run).values()
+        ):
+            b = "streak"
+        if b is None and any(
+            p.get("kind") in ("main", "plan") and p.get("rep_total", 0) >= 3
+            for p in plans_by_date.get(iso, [])
+        ):
+            b = "mastery"
+        if b:
+            out[iso] = b
+    return out
+
+
 # ── 按月数据生成 ─────────────────────────────────────────────────────────
-def build_month_data(year, month, days, dom_payload, plans_by_date):
+def build_month_data(year, month, days, dom_payload, plans_by_date, mastery_top=None):
     month_days = {}
     for iso, d in days.items():
         try:
@@ -493,6 +627,7 @@ def build_month_data(year, month, days, dom_payload, plans_by_date):
                 "completed": d.get("completed"),
                 "intel": d.get("intel", []),
                 "recs": d.get("recs", []),
+                "buff": d.get("buff"),
             }
     month_plans = {}
     for iso, p_list in plans_by_date.items():
@@ -509,6 +644,8 @@ def build_month_data(year, month, days, dom_payload, plans_by_date):
                 "kind": p["kind"],
                 "domain": p.get("domain", ""),
                 "done": p.get("done", False),
+                "reps": p.get("reps"),
+                "rep_total": p.get("rep_total"),
             } for p in p_list]
     return {
         "year": year,
@@ -516,6 +653,7 @@ def build_month_data(year, month, days, dom_payload, plans_by_date):
         "days": month_days,
         "plans": month_plans,
         "expert": {iso: expert_for_day(days.get(iso), dom_payload) for iso in month_days},
+        "mastery": mastery_top or [],
     }
 
 
@@ -676,12 +814,17 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .perforation::before,.perforation::after{{content:'';position:absolute;top:-6px;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 50% 45%,rgba(0,0,0,.24),rgba(0,0,0,.09) 55%,transparent 60%)}}
 .perforation::before{{left:-6px}}
 .perforation::after{{right:-6px}}
-/* 双栏模块化排版：呼吸感优先 */
-.rc-cols{{display:grid;grid-template-columns:1fr 1fr;gap:0 34px;align-items:start}}
-.rc-col{{min-width:0;max-width:100%;overflow-wrap:break-word;word-break:break-word}}
-.rc-col .lst li{{white-space:normal;overflow-wrap:anywhere}}
-.rc-col .srow{{min-width:0}}
-@media (max-width:640px){{.rc-cols{{grid-template-columns:1fr;gap:0}}.rc-col+.rc-col{{border-top:2px dotted rgba(120,85,40,.3);margin-top:16px;padding-top:4px}}}}
+/* 单据内容：单列纵向排版，阅读动线自上而下 */
+.sheet-body .lst li{{white-space:normal;overflow-wrap:anywhere}}
+.sheet-body .srow{{min-width:0}}
+/* buff 增益行 */
+.b-ic{{color:#c9861a}}
+.buffline{{display:flex;align-items:flex-start;gap:8px;margin:10px 0 2px;padding:9px 12px;background:rgba(217,164,65,.12);border:1px dashed rgba(160,115,35,.4);border-radius:8px}}
+.buffline .b-ic{{flex:none;color:#c9861a;transform:translateY(1px)}}
+.buffline .b-name{{font-size:12px;font-weight:700;color:#a4741f;letter-spacing:1px;flex:none}}
+.buffline .b-desc{{font-size:12px;color:var(--ink-soft);line-height:1.6}}
+.p-streak .mas-label{{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}}
+.lst .rep{{font-size:10px;color:#c9861a;border:1px solid rgba(201,134,26,.45);border-radius:8px;padding:0 6px;margin-left:5px;white-space:nowrap;font-weight:700}}
 .sec{{margin-top:22px}}
 .sec:first-child{{margin-top:4px}}
 .sec h4{{font-size:11.5px;letter-spacing:3px;color:var(--ink-soft);border-bottom:1px solid rgba(120,85,40,.25);padding-bottom:7px;margin-bottom:12px;display:flex;align-items:center;gap:6px;font-family:monospace;text-transform:uppercase}}
@@ -725,9 +868,6 @@ footer code{{font-family:monospace;background:rgba(0,0,0,.2);padding:1px 6px;bor
 .export .ex-brand{{font-family:"Songti SC","STSong",serif;font-size:16px;letter-spacing:4px;color:#8a6a3d;border-bottom:1px solid #e0d2b4;padding-bottom:10px;margin-bottom:8px;text-align:center}}
 .export .ex-date{{font-family:"Songti SC","STSong",serif;font-size:26px;font-weight:700;text-align:center}}
 .export .ex-mood{{font-size:13px;color:#7a6242;margin-top:4px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}}
-.export .ex-cols{{display:flex;gap:14px;margin-top:14px}}
-.export .ex-col{{flex:1;background:#f4ead2;border-radius:8px;padding:10px 12px;min-width:0}}
-.export .ex-col-h{{font-size:13px;font-weight:700;color:#7a6242;margin-bottom:6px;display:flex;align-items:center;gap:6px}}
 .export .ex-li{{font-size:13px;padding:3px 0;display:flex;gap:6px;align-items:baseline}}
 .export .ex-li-ic{{flex:none;transform:translateY(1px)}}
 .export .ex-none{{font-size:12px;color:#a08a64}}
@@ -819,6 +959,13 @@ var WD = ['周日','周一','周二','周三','周四','周五','周六'];
 var LI_ICON = {{done:'check',undone:'x',worry:'cloud'}};
 var LI_COLOR = {{done:'#2e7d5b',undone:'#c0392b',worry:'#b59a5a'}};
 var PLAN_COLOR = {{main:'#d9a441',backup:'rgba(120,90,40,.5)',plan:'rgba(120,90,40,.5)',event:'#5b8db8'}};
+/* 增益 buff：由证据自动推导（见 build_calendar.py），正向、次日生效、一天最多 1 个 */
+var BUFF_META = {{
+  streak:   {{name:'连击', icn:'flame', desc:'有领域连续 3 天以上达标——手感正热，主行动顺势排它，乘势而上'}},
+  momentum: {{name:'动能', icn:'waves', desc:'昨天多线推进——顺风日，可以加一个 30 分钟进阶挑战，加量不加时'}},
+  recovery: {{name:'回血', icn:'battery-charging', desc:'昨天是低能日——今天只做一件事，做完即赢；恢复是战略，不是偷懒'}},
+  mastery:  {{name:'复利', icn:'zap', desc:'今天要做的是重复 3 次以上的极致行动——目标：比上次更省力'}}
+}};
 
 /* 数据加载：file:// 安全（script 注入，不依赖 fetch） */
 function loadMonth(month, cb) {{
@@ -855,11 +1002,21 @@ function renderStats() {{
   var todayAvg = keys.length ? (keys.reduce(function(a,k){{return a+todayScores[k];}},0)/keys.length) : null;
   var capT = todayData.capture || {{}};
   var totalDays = (GHB.meta||{{}}).total_days || 0;
+  var buff = GHB.buff ? BUFF_META[GHB.buff] : null;
   h += '<div class="plaque today-p"><div class="p-name"><span>今日概览</span><span class="p-dot"></span></div>'+
     '<div class="p-score">'+(todayAvg==null?'—':todayAvg.toFixed(2))+'</div>'+
     '<div class="p-bar"><i style="width:'+((todayAvg||0)*100)+'%"></i></div>'+
     '<div class="p-streak"><span class="mi">'+ic('check','ic-xs')+'</span>'+((capT.done||[]).length)+
-    ' <span class="mi">'+ic('x','ic-xs')+'</span>'+((capT.undone||[]).length)+' · 已记录 '+totalDays+' 天</div></div>';
+    ' <span class="mi">'+ic('x','ic-xs')+'</span>'+((capT.undone||[]).length)+' · 已记录 '+totalDays+' 天'+
+    (buff?' · <span class="b-ic">'+ic(buff.icn,'ic-xs')+'</span>'+esc(buff.name):'')+'</div></div>';
+  var mas = (GHB.mastery||[])[0];
+  if (mas) {{
+    h += '<div class="plaque" style="--accent:#c9861a"><div class="p-name"><span>极致行动</span><span class="p-dot"></span></div>'+
+      '<div class="p-score">'+mas.count+'<span style="font-size:12px;font-weight:400;color:var(--ink-soft)"> 次</span></div>'+
+      '<div class="p-bar"><i style="width:'+(mas.doneRate*100)+'%"></i></div>'+
+      '<div class="p-streak" title="'+esc(mas.label)+'"><span class="mi">'+ic('zap','ic-xs')+'</span><span class="mas-label">'+esc(mas.label)+'</span>'+
+      ' · 完成 '+Math.round(mas.doneRate*100)+'%'+(mas.easing?' · 越做越轻':'')+'</div></div>';
+  }}
   document.getElementById('stats').innerHTML = h;
 }}
 
@@ -1151,6 +1308,9 @@ function openDay(iso) {{
   var recs = d.recs||[];
   var dm = GHB ? GHB.domains : {{}};
 
+  var isToday = (iso === (GHB?GHB.today:''));
+  var buff = isToday && GHB && GHB.buff ? BUFF_META[GHB.buff] : null;
+
   var dayPlans = ((md.plans||{{}})[iso]) || [];
   var lst = function(arr,cls) {{
     return arr.length
@@ -1189,6 +1349,9 @@ function openDay(iso) {{
       (baks?'<div class="n-bak">'+baks+'</div>':'')+
       '</div></div>';
   }}
+  if (buff) {{
+    nextBox += '<div class="buffline"><span class="b-ic">'+ic(buff.icn,'ic-sm')+'</span><span class="b-name">'+esc(buff.name)+' Buff</span><span class="b-desc">'+esc(buff.desc)+'</span></div>';
+  }}
 
   var planHtml = '';
   if (dayPlans.length) {{
@@ -1197,9 +1360,10 @@ function openDay(iso) {{
         var st = p.done ? ' ✓ 已完成' : (p.kind==='main' ? ' · 主行动' : (p.kind==='event' ? ' · 事件' : ''));
         var color = p.done ? '#999' : (PLAN_COLOR[p.kind] || 'rgba(120,90,40,.5)');
         var tdec = p.done ? ' style="text-decoration:line-through"' : '';
-        return '<li'+tdec+'><span class="p-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+color+';flex:none;margin-right:5px"></span>'+esc(p.text)+' <span style="font-size:11px;color:#a08a64">'+st+'</span></li>';
+        var rep = (p.reps>=2) ? '<span class="rep">⚡第'+p.reps+'次</span>' : '';
+        return '<li'+tdec+'><span class="p-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+color+';flex:none;margin-right:5px"></span>'+esc(p.text)+rep+' <span style="font-size:11px;color:#a08a64">'+st+'</span></li>';
       }}).join('')+
-      '</ul><p style="font-size:11px;color:#a08a64;margin-top:6px;font-style:italic">完成状态由晚间复盘回填</p></div>';
+      '</ul><p style="font-size:11px;color:#a08a64;margin-top:6px;font-style:italic">完成状态由晚间复盘回填 · ⚡ 极致行动：重复 3 次以上，越做越轻松</p></div>';
   }}
 
   var secLst = function(title, icn, arr, color) {{
@@ -1250,18 +1414,12 @@ function openDay(iso) {{
         '<button class="m-btn'+(PRINT_ON?'':' off')+'" id="mfx-toggle">'+(PRINT_ON?'效果 开':'效果 关')+'</button>'+
         '<button class="m-btn" id="mexport">'+ic('download','ic-sm')+' 导出图片</button>'+
         '<button class="m-btn m-close" id="mclose">'+ic('x')+'</button></div></div>'+
-    '<div class="rc-cols">'+
-      '<div class="rc-col">'+
-        '<div class="sec"><h4>'+ic('check-circle','ic-sm')+' 完成</h4>'+lst(done,'done')+'</div>'+
-        '<div class="sec"><h4>'+ic('x-circle','ic-sm')+' 未完成</h4>'+lst(undone,'undone')+'</div>'+
-        '<div class="sec"><h4>'+ic('cloud','ic-sm')+' 担心 / 情绪</h4>'+lst(dw,'worry')+'</div>'+
-      '</div>'+
-      '<div class="rc-col">'+
-        (bars?'<div class="sec"><h4>'+ic('bar-chart-2','ic-sm')+' 领域评分</h4>'+bars+'</div>':'')+
-        secLst('情报补给','trending-up',intel,'#c9a45a')+
-        secLst('推荐','star',recs,'#5b8db8')+
-      '</div>'+
-    '</div>'+
+    '<div class="sec"><h4>'+ic('check-circle','ic-sm')+' 完成</h4>'+lst(done,'done')+'</div>'+
+    '<div class="sec"><h4>'+ic('x-circle','ic-sm')+' 未完成</h4>'+lst(undone,'undone')+'</div>'+
+    '<div class="sec"><h4>'+ic('cloud','ic-sm')+' 担心 / 情绪</h4>'+lst(dw,'worry')+'</div>'+
+    (bars?'<div class="sec"><h4>'+ic('bar-chart-2','ic-sm')+' 领域评分</h4>'+bars+'</div>':'')+
+    secLst('情报补给','trending-up',intel,'#c9a45a')+
+    secLst('推荐','star',recs,'#5b8db8')+
     (expertHtml||'')+
     (planHtml?'<div class="perforation"></div>'+planHtml:'')+
     (nextBox?'<div class="perforation"></div>'+nextBox:'')+
@@ -1340,11 +1498,6 @@ function buildExportCard(iso) {{
   var ex = (md.expert||{{}})[iso]||{{}};
   var dm = GHB ? GHB.domains : {{}};
 
-  var mk = function(arr,icn,col) {{
-    return (arr&&arr.length)
-      ? arr.map(function(x){{return '<div class="ex-li"><span class="ex-li-ic" style="color:'+col+'">'+ic(icn,'ic-xs')+'</span>'+esc(x)+'</div>';}}).join('')
-      : '<div class="ex-none">—</div>';
-  }};
   var rows = Object.keys(dm).filter(function(n){{return ex[n];}}).map(function(n) {{
     var e = ex[n];
     return '<div class="ex-coach" style="border-color:'+e.color+'">'+
@@ -1361,21 +1514,29 @@ function buildExportCard(iso) {{
 
   var node = document.createElement('div');
   node.className = 'export';
+  var isoNow = (GHB?GHB.today:'');
+  var exBuff = (iso===isoNow && GHB && GHB.buff) ? BUFF_META[GHB.buff] : null;
+  var exSec = function(title, icn, arr, col) {{
+    return '<div class="ex-sec"><div class="ex-sec-h">'+ic(icn,'ic-sm')+' '+title+'</div>'+
+      ((arr&&arr.length)?arr.map(function(x){{return '<div class="ex-li"><span class="ex-li-ic" style="color:'+col+'">'+ic(icn==='star'?'star':'arrow-right','ic-xs')+'</span>'+esc(x)+'</div>';}}).join(''):'<div class="ex-none">—</div>')+'</div>';
+  }};
   node.innerHTML =
     '<div class="ex-brand">人生进度 · 木刻日历</div>'+
     '<div class="ex-date">'+iso.replace(/-/g,' · ')+' '+WD[dt.getDay()]+'</div>'+
     (d.mood!=null?'<div class="ex-mood">'+moodIcon(d.mood)+' 心情 '+d.mood+'/10</div>':'')+
-    '<div class="ex-cols">'+
-      '<div class="ex-col"><div class="ex-col-h">'+ic('check-circle','ic-sm')+' 完成</div>'+mk(cap.done,'check','#2e7d5b')+'</div>'+
-      '<div class="ex-col"><div class="ex-col-h">'+ic('x-circle','ic-sm')+' 未完成</div>'+mk(cap.undone,'x','#c0392b')+'</div>'+
-      '<div class="ex-col"><div class="ex-col-h">'+ic('cloud','ic-sm')+' 担心</div>'+mk(cap.worries,'cloud','#b59a5a')+'</div>'+
-    '</div>'+
+    '<div class="ex-sec"><div class="ex-sec-h">'+ic('check-circle','ic-sm')+' 完成</div>'+
+      ((cap.done&&cap.done.length)?cap.done.map(function(x){{return '<div class="ex-li"><span class="ex-li-ic" style="color:#2e7d5b">'+ic('check','ic-xs')+'</span>'+esc(x)+'</div>';}}).join(''):'<div class="ex-none">—</div>')+'</div>'+
+    '<div class="ex-sec"><div class="ex-sec-h">'+ic('x-circle','ic-sm')+' 未完成</div>'+
+      ((cap.undone&&cap.undone.length)?cap.undone.map(function(x){{return '<div class="ex-li"><span class="ex-li-ic" style="color:#c0392b">'+ic('x','ic-xs')+'</span>'+esc(x)+'</div>';}}).join(''):'<div class="ex-none">—</div>')+'</div>'+
+    '<div class="ex-sec"><div class="ex-sec-h">'+ic('cloud','ic-sm')+' 担心</div>'+
+      ((cap.worries&&cap.worries.length)?cap.worries.map(function(x){{return '<div class="ex-li"><span class="ex-li-ic" style="color:#b59a5a">'+ic('cloud','ic-xs')+'</span>'+esc(x)+'</div>';}}).join(''):'<div class="ex-none">—</div>')+'</div>'+
     (bars?'<div class="ex-sec"><div class="ex-sec-h">'+ic('bar-chart-2','ic-sm')+' 领域评分</div>'+bars+'</div>':'')+
-    ((d.intel||[]).length?'<div class="ex-sec"><div class="ex-sec-h">'+ic('trending-up','ic-sm')+' 情报补给</div>'+mk(d.intel,'arrow-right','#c9a45a')+'</div>':'')+
-    ((d.recs||[]).length?'<div class="ex-sec"><div class="ex-sec-h">'+ic('star','ic-sm')+' 推荐</div>'+mk(d.recs,'arrow-right','#5b8db8')+'</div>':'')+
+    ((d.intel||[]).length?exSec('情报补给','trending-up',d.intel,'#c9a45a'):'')+
+    ((d.recs||[]).length?exSec('推荐','star',d.recs,'#5b8db8'):'')+
     (rows?'<div class="ex-sec"><div class="ex-sec-h">'+ic('compass','ic-sm')+' 专家点评</div>'+rows+'</div>':'')+
     (ex.__overall__?'<div class="ex-overall">'+ic('star','ic-sm')+' '+esc(ex.__overall__)+'</div>':'')+
     (next.main?'<div class="ex-next">'+ic('crosshair','ic-sm')+' '+esc(next.main)+'</div>':'')+
+    (exBuff?'<div class="ex-next" style="border-style:dashed;background:rgba(217,164,65,.12)"><span style="color:#c9861a">'+ic(exBuff.icn,'ic-sm')+'</span><b style="margin-right:4px">'+esc(exBuff.name)+' Buff</b><span style="font-weight:400">'+esc(exBuff.desc)+'</span></div>':'')+
     '<div class="ex-foot">gao · 每日复盘 · 数据仅存本机</div>';
   node.style.position = 'fixed'; node.style.left = '-9999px'; node.style.top = '0';
   document.body.appendChild(node);
@@ -1442,6 +1603,14 @@ def main():
     days, plans_by_date = load_daily_mdx(daily_dir)
     dom_payload = build_domains_payload(domains)
 
+    # 极致引擎：重复行动识别 + buff 增益（构建时推导，不加人工负担）
+    mastery = annotate_repeats(plans_by_date)
+    buffs = build_buffs(days, plans_by_date)
+    # 弹层用的当月 day 数据带上 buff
+    for iso, b in buffs.items():
+        if iso in days:
+            days[iso]["buff"] = b
+
     has_state = bool(domains) or bool(days)
 
     # 月份范围：所有数据日期 ∪ 当前月，前 12 个月 + 未来 6 个月
@@ -1473,9 +1642,10 @@ def main():
 
     index_months = []
     month_js_parts = []   # 内联模式累积
+    mastery_top = mastery[:3]
     for ym in ym_sorted:
         y, m = int(ym[:4]), int(ym[5:7])
-        month_data = build_month_data(y, m, days, dom_payload, plans_by_date)
+        month_data = build_month_data(y, m, days, dom_payload, plans_by_date, mastery_top)
         has_any = bool(month_data["days"] or month_data["plans"])
         is_current = (y, m) == (TODAY.year, TODAY.month)
         if not has_any and not is_current:
@@ -1525,6 +1695,8 @@ def main():
         "domains": dom_payload,
         "plans": future_plans,
         "worries_open": open_worries,
+        "buff": buffs.get(today_iso),
+        "mastery": mastery_top,
         "meta": {"generated": TODAY.isoformat(), "total_days": len(days)},
     }
 

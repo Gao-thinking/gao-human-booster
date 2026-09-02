@@ -1,1 +1,19 @@
-{"version": "v1.0.0", "history": [{"version": "v1.0.0", "date": "", "changelog": ["初始版本"]}]}
+{
+ "version": "v1.2.0",
+ "history": [
+  {
+   "version": "v1.0.0",
+   "date": "",
+   "changelog": [
+    "初始版本"
+   ]
+  },
+  {
+   "version": "v1.2.0",
+   "date": "2026-09-02",
+   "changelog": [
+    "初始版本随 v1.2.0 模板"
+   ]
+  }
+ ]
+}
